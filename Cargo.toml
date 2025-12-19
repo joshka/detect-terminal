@@ -1,0 +1,6 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/detect-terminal",
+  "crates/detect-terminal-cli",
+]
