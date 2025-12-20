@@ -1,3 +1,6 @@
+//! Detection logic for terminals and multiplexers.
+//!
+//! See [Detection Logic](crate#detection-logic) for the crate-level narrative.
 use crate::command::{
     CommandRunner, CommandSpec, DefaultCommandRunner, run_version_command, tmux_display_message,
 };
@@ -11,8 +14,11 @@ use crate::{
 ///
 /// This uses default [`DetectOptions`] with command probing enabled and captures
 /// the subset of environment variables read.
-/// The returned `TerminalInfo` always includes any `TERM_PROGRAM` or `TERM`
+/// The returned [`TerminalInfo`] always includes any `TERM_PROGRAM` or `TERM`
 /// values found in the environment.
+/// Returns [`TerminalKind::Unknown`] when no markers match.
+/// See the [Detection Logic](crate#detection-logic) overview for precedence and
+/// mux interaction details.
 ///
 /// # Example
 ///
@@ -20,7 +26,7 @@ use crate::{
 /// use detect_terminal::detect;
 ///
 /// let info = detect();
-/// println!("terminal: {:?}", info.kind);
+/// println!("terminal: {kind:?}", kind = info.kind);
 /// ```
 pub fn detect() -> TerminalInfo {
     let env = env_map_from_os();
@@ -30,8 +36,12 @@ pub fn detect() -> TerminalInfo {
 /// Detect terminal and multiplexer info from the provided environment map.
 ///
 /// This uses default [`DetectOptions`] and is useful for testing with a custom
-/// environment. The input map drives both detection and the `raw_env_subset`
+/// environment. The input map drives both detection and the
+/// [`TerminalInfo::raw_env_subset`]
 /// capture.
+/// Returns [`TerminalKind::Unknown`] when no markers match.
+/// See the [Detection Logic](crate#detection-logic) overview for precedence and
+/// mux interaction details.
 ///
 /// # Example
 ///
@@ -44,7 +54,7 @@ pub fn detect() -> TerminalInfo {
 /// env.insert(OsString::from("TERM_PROGRAM"), OsString::from("iTerm.app"));
 ///
 /// let info = detect_from_env(&env);
-/// println!("terminal: {:?}", info.kind);
+/// println!("terminal: {kind:?}", kind = info.kind);
 /// ```
 pub fn detect_from_env(env: &EnvMap) -> TerminalInfo {
     detect_with_options(env, DetectOptions::default())
@@ -53,8 +63,12 @@ pub fn detect_from_env(env: &EnvMap) -> TerminalInfo {
 /// Detect terminal and multiplexer info with explicit options.
 ///
 /// This is the most flexible entry point and can disable command probes or
-/// environment capture. `term_program`, `term_program_version`, and `term` are
-/// set directly from the provided environment map.
+/// environment capture. [`TerminalInfo::term_program`],
+/// [`TerminalInfo::term_program_version`], and [`TerminalInfo::term`] are set
+/// directly from the provided environment map.
+/// Returns [`TerminalKind::Unknown`] when no markers match.
+/// See the [Detection Logic](crate#detection-logic) overview for precedence and
+/// mux interaction details.
 ///
 /// # Example
 ///
@@ -67,7 +81,7 @@ pub fn detect_from_env(env: &EnvMap) -> TerminalInfo {
 ///     capture_env_subset: false,
 /// };
 /// let info = detect_with_options(&env, options);
-/// println!("terminal: {:?}", info.kind);
+/// println!("terminal: {kind:?}", kind = info.kind);
 /// ```
 pub fn detect_with_options(env: &EnvMap, options: DetectOptions) -> TerminalInfo {
     let runner = DefaultCommandRunner;
@@ -191,6 +205,8 @@ fn detect_multiplexer(
 }
 
 /// Detect the terminal emulator using env markers and optional mux probes.
+///
+/// Add new terminal markers here and update the TerminalKind docs and tests.
 fn detect_terminal(
     env: &mut EnvView<'_>,
     options: &DetectOptions,
@@ -208,6 +224,7 @@ fn detect_terminal(
     result.term_program_version = term_program_version.clone();
     result.term = term.clone();
     result.raw_name = term_program.clone().or_else(|| term.clone());
+    result.version = term_program_version.clone();
 
     if let Some(value) = term_program.clone() {
         let normalized = value.to_lowercase();
@@ -290,18 +307,17 @@ fn detect_terminal(
         set_terminal_simple(&mut result, TerminalKind::WindowsTerminal, "WT_SESSION");
     }
 
-    if result.kind == TerminalKind::Unknown {
-        if let Some(session) = env.get("SESSIONNAME") {
-            if session.eq_ignore_ascii_case("console") {
-                set_terminal(
-                    &mut result,
-                    TerminalKind::ConHost,
-                    None,
-                    "SESSIONNAME",
-                    session,
-                );
-            }
-        }
+    if result.kind == TerminalKind::Unknown
+        && let Some(session) = env.get("SESSIONNAME")
+        && session.eq_ignore_ascii_case("console")
+    {
+        set_terminal(
+            &mut result,
+            TerminalKind::ConHost,
+            None,
+            "SESSIONNAME",
+            session,
+        );
     }
 
     if result.kind == TerminalKind::Unknown {
@@ -399,10 +415,8 @@ fn detect_terminal(
             set_terminal(&mut result, TerminalKind::Rxvt, None, "TERM", value);
         } else if normalized.contains("xterm") {
             set_terminal(&mut result, TerminalKind::Xterm, None, "TERM", value);
-        } else if normalized.contains("screen") {
-            if mux_kind != Some(&MultiplexerKind::Tmux) {
-                set_terminal(&mut result, TerminalKind::Screen, None, "TERM", value);
-            }
+        } else if normalized.contains("screen") && mux_kind != Some(&MultiplexerKind::Tmux) {
+            set_terminal(&mut result, TerminalKind::Screen, None, "TERM", value);
         }
     }
 
@@ -580,6 +594,12 @@ mod tests {
         Some("xterm-kitty".to_string())
     )]
     #[case(
+        env_from_pairs(&[("TERM_PROGRAM", "iTerm.app"), ("TERM", "xterm-kitty")]),
+        TerminalKind::ITerm2,
+        None,
+        Some("iTerm.app".to_string())
+    )]
+    #[case(
         env_from_pairs(&[("WEZTERM_EXECUTABLE", "/opt/wezterm")]),
         TerminalKind::WezTerm,
         None,
@@ -615,11 +635,32 @@ mod tests {
         assert_eq!(info.version, expected_version);
         if expected_raw.as_deref() == Some("iTerm.app") {
             assert_eq!(info.term_program.as_deref(), Some("iTerm.app"));
-            assert_eq!(info.term_program_version.as_deref(), Some("3.4.22"));
         }
         if expected_raw.is_some() {
             assert_eq!(info.raw_name, expected_raw);
         }
+    }
+
+    #[test]
+    fn preserves_term_program_version_for_unknown_terminal() {
+        let env = env_from_pairs(&[
+            ("TERM_PROGRAM", "unknown-term"),
+            ("TERM_PROGRAM_VERSION", "9.9.9"),
+        ]);
+        let runner = TestCommandRunner::new(BTreeMap::new());
+        let info = detect_with_runner(&env, &DetectOptions::default(), &runner);
+        assert_eq!(info.kind, TerminalKind::Unknown);
+        assert_eq!(info.term_program_version.as_deref(), Some("9.9.9"));
+        assert_eq!(info.version.as_deref(), Some("9.9.9"));
+    }
+
+    #[test]
+    fn tmux_does_not_set_screen_terminal_kind() {
+        let env = env_from_pairs(&[("TMUX", "1"), ("TERM", "screen-256color")]);
+        let runner = TestCommandRunner::new(BTreeMap::new());
+        let info = detect_with_runner(&env, &DetectOptions::default(), &runner);
+        assert_eq!(info.kind, TerminalKind::Unknown);
+        assert_eq!(info.multiplexer.unwrap().kind, MultiplexerKind::Tmux);
     }
 
     #[test]
