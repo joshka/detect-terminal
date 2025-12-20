@@ -4,7 +4,10 @@ use std::ffi::OsString;
 /// Environment map used by the detector.
 ///
 /// This is the input type consumed by [`detect_from_env`] and
-/// [`detect_with_options`].
+/// [`detect_with_options`]. Keys and values are stored as `OsString` to match
+/// how the OS represents environment variables, and the map is copied so tests
+/// can construct their own detection inputs.
+/// A `BTreeMap` is used so iteration is stable for debugging and tests.
 ///
 /// # Example
 ///
@@ -16,13 +19,16 @@ use std::ffi::OsString;
 ///
 /// [`detect_from_env`]: crate::detect_from_env
 /// [`detect_with_options`]: crate::detect_with_options
+/// [`EnvMap`]: crate::EnvMap
+/// [`TerminalInfo::raw_env_subset`]: crate::TerminalInfo::raw_env_subset
 pub type EnvMap = BTreeMap<OsString, OsString>;
 
 /// Read-only view of the environment with optional capture of accessed keys.
 ///
 /// This is used by the detector to record the specific variables read while
 /// still performing lookups from the original map. Captured keys become
-/// `TerminalInfo::raw_env_subset`.
+/// [`TerminalInfo::raw_env_subset`] so callers can audit which markers were
+/// queried.
 pub(crate) struct EnvView<'a> {
     env: &'a EnvMap,
     capture: bool,
@@ -45,7 +51,7 @@ impl<'a> EnvView<'a> {
     /// Read a key from the environment, recording it if capture is enabled.
     ///
     /// Returns a UTF-8 lossy string for non-Unicode values to keep downstream
-    /// detection simple.
+    /// detection simple. Returns `None` when the key is absent.
     pub(crate) fn get(&mut self, key: &str) -> Option<String> {
         let value = self
             .env
@@ -76,7 +82,7 @@ impl<'a> EnvView<'a> {
 
 /// Build an environment map from the current process.
 ///
-/// This collects `std::env::vars_os` into the `EnvMap` used by the detector.
+/// This collects [`std::env::vars_os`] into the [`EnvMap`] used by the detector.
 pub(crate) fn env_map_from_os() -> EnvMap {
     std::env::vars_os().collect()
 }

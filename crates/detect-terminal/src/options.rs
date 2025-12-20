@@ -3,7 +3,10 @@
 /// This struct feeds into [`detect_with_options`] to control the extra debug
 /// output and whether the detector shells out for tmux/screen/zellij metadata.
 /// Defaults enable command probing and env capture so `detect()` returns richer
-/// multiplexer details and `raw_env_subset` is populated.
+/// multiplexer details and [`TerminalInfo::raw_env_subset`] is populated.
+/// Fields default to `true`.
+/// Use `allow_commands = false` for latency-sensitive or sandboxed contexts.
+/// Use `capture_env_subset = false` to avoid retaining sensitive values.
 ///
 /// # Example
 ///
@@ -19,17 +22,22 @@
 /// ```
 ///
 /// [`detect_with_options`]: crate::detect_with_options
+/// [`TerminalInfo::raw_env_subset`]: crate::TerminalInfo::raw_env_subset
 #[derive(Debug, Clone)]
 pub struct DetectOptions {
     /// Allow running tmux/screen/zellij commands for extra metadata.
     ///
     /// When disabled, the detector only uses environment variables and skips
     /// command probes like `tmux -V` or `zellij --version`.
+    ///
+    /// Disabling commands can reduce latency in hot paths.
     pub allow_commands: bool,
     /// Capture only the environment variables read during detection.
     ///
-    /// When enabled, the `TerminalInfo::raw_env_subset` map contains only the
-    /// keys accessed by the detector.
+    /// When enabled, the [`TerminalInfo::raw_env_subset`] map contains
+    /// only the keys accessed by the detector.
+    ///
+    /// [`TerminalInfo::raw_env_subset`]: crate::TerminalInfo::raw_env_subset
     pub capture_env_subset: bool,
 }
 
