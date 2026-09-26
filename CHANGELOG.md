@@ -5,6 +5,7 @@
 Initial release:
 
 - Identify terminal applications from program markers and retain raw program and terminfo values.
+- Ignore inherited `GHOSTTY_RESOURCES_DIR` when identifying the terminal.
 - Recognize Rio through `TERM_PROGRAM=rio` or the `rio` terminfo family.
 - Report tmux, GNU Screen, and Zellij separately from terminal identity.
 - Use environment-only detection by default, with optional blocking multiplexer probes.

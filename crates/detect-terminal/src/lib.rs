@@ -94,7 +94,7 @@
 //! 1. Nonempty `TMUX`, `ZELLIJ`, then `STY` select a multiplexer in that order. Multiple markers
 //!    cannot reliably establish nesting order; the result does not model a session stack.
 //! 2. A recognized `TERM_PROGRAM` wins over vendor markers. Vendor markers are checked in a fixed
-//!    order, beginning with `WT_SESSION`, WezTerm, Kitty, Alacritty, and Ghostty. Each successful
+//!    order, beginning with `WT_SESSION`, WezTerm, Kitty, and Alacritty. Each successful
 //!    environment match records the matching key and value. See [`TerminalKind`] for supported
 //!    hints.
 //! 3. With commands enabled, a recognized tmux client term name takes precedence over the pane's
@@ -107,7 +107,9 @@
 //! and allow later rules to match. `TERM_PROGRAM_VERSION` becomes [`TerminalInfo::version`] only
 //! when `TERM_PROGRAM` itself identifies the result; otherwise it remains raw metadata in
 //! [`TerminalInfo::term_program_version`]. `SESSIONNAME=Console` does not identify Windows Console
-//! Host, and is not used for detection.
+//! Host, and is not used for detection. `GHOSTTY_RESOURCES_DIR` is also ignored: resource paths
+//! can survive into nested applications such as VS Code and tmux. If those applications replace
+//! the program marker and no other recognized hint remains, the result is `Unknown`.
 //!
 //! This controlled snapshot demonstrates why a program marker wins over a multiplexer
 //! emulation name. It does not describe the environment of every tmux session.

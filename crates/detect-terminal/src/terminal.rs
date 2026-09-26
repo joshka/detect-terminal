@@ -53,7 +53,7 @@ pub enum TerminalKind {
     Foot,
     /// Ghostty terminal emulator. <https://ghostty.org>
     ///
-    /// Markers: `TERM_PROGRAM=ghostty`, `GHOSTTY_RESOURCES_DIR`, `TERM=xterm-ghostty`,
+    /// Markers: `TERM_PROGRAM=ghostty`, `TERM=xterm-ghostty`,
     /// `TERM=ghostty`.
     Ghostty,
     /// GNOME Terminal. <https://wiki.gnome.org/Apps/Terminal>

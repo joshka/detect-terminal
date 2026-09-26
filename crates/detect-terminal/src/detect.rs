@@ -129,7 +129,6 @@ fn detect_terminal(env: &mut EnvView<'_>, info: &mut TerminalInfo) {
         ("KITTY_WINDOW_ID", TerminalKind::Kitty),
         ("KITTY_PID", TerminalKind::Kitty),
         ("ALACRITTY_SOCKET", TerminalKind::Alacritty),
-        ("GHOSTTY_RESOURCES_DIR", TerminalKind::Ghostty),
         ("TERMINAL_EMULATOR", TerminalKind::JetBrains),
         ("KONSOLE_VERSION", TerminalKind::Konsole),
         ("GNOME_TERMINAL_SERVICE", TerminalKind::GnomeTerminal),
@@ -290,7 +289,6 @@ mod tests {
     #[case("KITTY_WINDOW_ID", TerminalKind::Kitty)]
     #[case("KITTY_PID", TerminalKind::Kitty)]
     #[case("ALACRITTY_SOCKET", TerminalKind::Alacritty)]
-    #[case("GHOSTTY_RESOURCES_DIR", TerminalKind::Ghostty)]
     #[case("KONSOLE_VERSION", TerminalKind::Konsole)]
     #[case("GNOME_TERMINAL_SERVICE", TerminalKind::GnomeTerminal)]
     #[case("GNOME_TERMINAL_SCREEN", TerminalKind::GnomeTerminal)]
@@ -366,6 +364,44 @@ mod tests {
         );
         let info = detect_from_env(&env(&[("SESSIONNAME", "Console"), ("ConEmuPID", "123")]));
         assert_eq!(info.kind, TerminalKind::ConEmu);
+    }
+
+    #[rstest]
+    #[case("vscode", "xterm-256color", TerminalKind::VSCode)]
+    #[case("tmux", "screen-256color", TerminalKind::Unknown)]
+    #[case("tmux", "tmux-256color", TerminalKind::Unknown)]
+    #[case("tmux", "xterm-kitty", TerminalKind::Kitty)]
+    fn inherited_ghostty_resources_do_not_identify_the_terminal(
+        #[case] program: &str,
+        #[case] term: &str,
+        #[case] expected: TerminalKind,
+    ) {
+        let snapshot = env(&[
+            (
+                "GHOSTTY_RESOURCES_DIR",
+                "/Applications/Ghostty.app/Contents/Resources/ghostty",
+            ),
+            ("TERM_PROGRAM", program),
+            ("TERM", term),
+            ("TMUX", "synthetic-session"),
+        ]);
+        let info = detect_from_env(&snapshot);
+        assert_eq!(info.kind, expected);
+        assert_eq!(info.multiplexer.unwrap().kind, MultiplexerKind::Tmux);
+        assert!(!info.raw_env_subset.contains_key("GHOSTTY_RESOURCES_DIR"));
+        assert!(
+            !info
+                .identifiers
+                .iter()
+                .any(|id| id.key == "GHOSTTY_RESOURCES_DIR")
+        );
+    }
+
+    #[test]
+    fn ghostty_resources_alone_are_not_identity_evidence() {
+        let info = detect_from_env(&env(&[("GHOSTTY_RESOURCES_DIR", "/usr/share/ghostty")]));
+        assert_eq!(info.kind, TerminalKind::Unknown);
+        assert!(info.detected_via.is_empty());
     }
 
     #[test]
