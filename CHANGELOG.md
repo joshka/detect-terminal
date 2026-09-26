@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.0 - 2026-09-26
+
 Initial release:
 
 - Identify terminal applications from program markers and retain raw program and terminfo values.

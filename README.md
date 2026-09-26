@@ -14,8 +14,8 @@ Rust 1.88 or newer.
 
 ## Library
 
-After the first release, add the library with `cargo add detect-terminal`. While working from this
-checkout, use a path dependency on `crates/detect-terminal`.
+Add the library with `cargo add detect-terminal`. For local development, use a path dependency on
+`crates/detect-terminal`.
 
 ```rust
 let info = detect_terminal::detect();
