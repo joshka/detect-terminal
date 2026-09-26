@@ -138,11 +138,10 @@ pub(crate) fn parse_version(kind: MultiplexerKind, output: &str) -> Option<Strin
     recognized.then(|| version.to_owned())
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests {
     use super::*;
 
-    #[cfg(unix)]
     #[test]
     fn runner_uses_snapshot_environment() {
         let env = EnvMap::from([("DETECT_PROBE_TEST".into(), "from snapshot".into())]);
