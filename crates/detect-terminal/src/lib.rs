@@ -100,8 +100,8 @@
 //! 3. With commands enabled, a recognized tmux client term name takes precedence over the pane's
 //!    `TERM`. Each probe runs once and its full command string identifies any resulting match.
 //! 4. `TERM` is a fallback. Matching uses complete family names followed by `-` or `.`, avoiding
-//!    substring matches such as `stupid` or `not-xterm`. `screen*` identifies Screen emulation only
-//!    when neither tmux nor zellij was selected.
+//!    substring matches such as `stupid` or `not-xterm`. The `screen` family identifies Screen
+//!    emulation only when neither tmux nor zellij was selected.
 //!
 //! Empty markers do not identify an application. Unrecognized `TERM_PROGRAM` values are retained
 //! and allow later rules to match. `TERM_PROGRAM_VERSION` becomes [`TerminalInfo::version`] only
@@ -133,7 +133,10 @@
 //! raw terminal names still appear in the result. Probe records include failures as well as output
 //! from successful commands. Non-Unicode environment values and output are decoded lossily.
 //! Review these fields before logging: session identifiers, paths, and command errors may contain
-//! private information. Capture is diagnostic evidence, not a complete environment dump.
+//! private information. Detection stops after a match, so the capture can omit existing variables
+//! that were never consulted. Missing entries do not prove those variables were unset.
+//! Use debug formatting or escape control characters when displaying raw values in a terminal;
+//! the library preserves decoded input rather than sanitizing it for display.
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs, missing_debug_implementations)]

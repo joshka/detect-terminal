@@ -28,7 +28,9 @@ cargo install zizmor --version 1.26.1 --locked
 ```
 
 The versioned utility installs match CI. `actionlint` is needed for workflow syntax checks. Update
-utility versions in CI and this guide together.
+utility versions in CI and this guide together. Follow the
+[actionlint installation instructions](https://github.com/rhysd/actionlint/blob/main/docs/install.md)
+for your platform.
 
 ## Development Checks
 
@@ -67,8 +69,7 @@ public API impact.
 Run `just deny` to check RustSec advisories, licenses (including development dependencies),
 duplicate versions, wildcard requirements, and dependency sources. `deny.toml` permits MIT,
 Apache-2.0, and Unicode-3.0 licenses and crates.io registry dependencies. Findings and warnings fail
-CI; exceptions must be narrow and explain why they are acceptable. This replaces the separate
-cargo-audit check.
+CI; exceptions must be narrow and explain why they are acceptable.
 
 Run `just zizmor` for workflow and Dependabot security checks and `just ci-check` for workflow
 syntax. CI runs zizmor with its pedantic rules and a read-only GitHub token for online audits. Local

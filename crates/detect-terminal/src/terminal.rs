@@ -9,6 +9,9 @@ use crate::multiplexer::MultiplexerInfo;
 /// can mean only that `TERM` names an xterm-compatible emulation. Inspect
 /// [`TerminalInfo::detected_via`] to distinguish a program marker from a terminfo fallback.
 /// See [Detection logic](crate#detection-logic) for precedence and each variant for its markers.
+/// Listed `TERM` families match the exact name or a suffix beginning with `-` or `.`.
+/// Program names and terminfo names are matched case-insensitively; presence markers must be
+/// nonempty.
 ///
 /// [`Unknown`](Self::Unknown) means no supported hint matched; raw values remain in
 /// [`TerminalInfo`]. [`fmt::Display`] returns a user-facing name, not a capability guarantee.
@@ -46,11 +49,12 @@ pub enum TerminalKind {
     ConEmu,
     /// foot terminal emulator. <https://codeberg.org/dnkl/foot>
     ///
-    /// Markers: `TERM=foot` and `foot-` variants.
+    /// Markers: `TERM=foot`.
     Foot,
     /// Ghostty terminal emulator. <https://ghostty.org>
     ///
-    /// Markers: `TERM_PROGRAM=ghostty`, `GHOSTTY_RESOURCES_DIR`, `TERM=xterm-ghostty`.
+    /// Markers: `TERM_PROGRAM=ghostty`, `GHOSTTY_RESOURCES_DIR`, `TERM=xterm-ghostty`,
+    /// `TERM=ghostty`.
     Ghostty,
     /// GNOME Terminal. <https://wiki.gnome.org/Apps/Terminal>
     ///
@@ -62,7 +66,8 @@ pub enum TerminalKind {
     Hyper,
     /// iTerm2 terminal emulator. <https://iterm2.com>
     ///
-    /// Markers: `TERM_PROGRAM=iTerm.app`, `TERM_PROGRAM_VERSION`.
+    /// Markers: `TERM_PROGRAM=iTerm.app`. `TERM_PROGRAM_VERSION` supplies optional version
+    /// metadata.
     ITerm2,
     /// JetBrains IDE terminal. <https://www.jetbrains.com/help/idea/terminal-emulator.html>
     ///
@@ -82,15 +87,15 @@ pub enum TerminalKind {
     Mintty,
     /// rxvt-unicode terminal emulator. <https://software.schmorp.de/pkg/rxvt-unicode.html>
     ///
-    /// Markers: `RXVT_SOCKET`, `RXVT_TERM`, `TERM=rxvt*`.
+    /// Markers: `RXVT_SOCKET`, `RXVT_TERM`, `TERM=rxvt`.
     Rxvt,
     /// GNU Screen terminal emulation. <https://www.gnu.org/software/screen/>
     ///
-    /// Markers: `TERM=screen*` (mux marker `STY` only affects multiplexer detection).
+    /// Markers: `TERM=screen` (mux marker `STY` only affects multiplexer detection).
     Screen,
     /// Simple terminal (st). <https://st.suckless.org>
     ///
-    /// Markers: `TERM=st` and `st-` variants.
+    /// Markers: `TERM=st`.
     St,
     /// Terminator terminal emulator. <https://gnome-terminator.org>
     ///
@@ -122,7 +127,7 @@ pub enum TerminalKind {
     WindowsTerminal,
     /// xterm terminal emulator. <https://invisible-island.net/xterm/>
     ///
-    /// Markers: `XTERM_VERSION`, `TERM=xterm*`.
+    /// Markers: `XTERM_VERSION`, `TERM=xterm`.
     Xterm,
     /// Unknown or unsupported terminal.
     Unknown,
@@ -166,7 +171,7 @@ impl fmt::Display for TerminalKind {
 /// Command-derived matches have a [`DetectionSource::Command`] and no environment identifier.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Identifier {
-    /// Name of the matching variable.
+    /// Name of the matching variable, using the detector's canonical spelling.
     pub key: String,
 
     /// Lossily decoded value of the matching variable.
@@ -174,6 +179,10 @@ pub struct Identifier {
 }
 
 /// Evidence for the selected terminal kind, separate from multiplexer metadata.
+///
+/// Found in [`TerminalInfo::detected_via`]. Environment sources name a key; its matched value is in
+/// [`TerminalInfo::identifiers`]. Command sources name a successful probe; its output is in
+/// [`TerminalInfo::command_probes`]. The display form prefixes these with `env:` or `command:`.
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DetectionSource {
@@ -197,6 +206,10 @@ impl fmt::Display for DetectionSource {
 /// `stdout` and `stderr` are trimmed and decoded lossily. Output from unsuccessful commands is
 /// retained for diagnostics but cannot supply detected metadata. See the crate's
 /// [probe contract](crate#optional-command-probes) for execution behavior.
+///
+/// An exit status of zero is necessary but not sufficient to supply metadata: the output must also
+/// be nonempty and, for a version, have a recognized banner. A `None` status with no `error` can
+/// indicate signal termination. These records describe probe attempts, not just successful matches.
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommandProbe {
