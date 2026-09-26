@@ -7,4 +7,4 @@ edition = "2024"
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"
-rstest = "0.24.0"
+rstest = { version = "0.27", default-features = false }
