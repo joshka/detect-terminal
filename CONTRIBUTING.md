@@ -1,128 +1,60 @@
 # Contributing
 
-## Overview
+The library owns detection rules and diagnostics. The CLI consumes that API and formats results.
+Keep environment hints, optional command metadata, and claims about actual terminal capabilities
+separate when proposing a change.
 
-This repository contains a Rust library (`detect-terminal`) and a CLI (`detect-terminal-cli`). The
-library is the source of truth for detection behavior; the CLI is only a consumer.
+## Setup
 
-## Scope
+Rust 1.97 is the minimum supported version. It was the previous stable release when this baseline
+was chosen. Raise the MSRV only when a language feature or dependency needs it, targeting the
+previous stable release at that time; do not advance it automatically for every crate release. Use
+stable Rust for development and nightly rustfmt for the unstable options in `rustfmt.toml`.
 
-Create a Rust library for detecting terminals and multiplexers from environment variables with
-optional command probing for tmux, screen, and zellij. Provide a small, ergonomic public API with
-sensible defaults and debug-friendly output. Document behavior clearly for first-time users and for
-testing/extension workflows.
+```sh
+rustup toolchain install stable --component clippy
+rustup toolchain install nightly --component rustfmt
+rustup toolchain install 1.97.0
+cargo install just --version 1.58.0 --locked
+cargo install rumdl --version 0.2.77 --locked
+```
 
-## Development Workflow
+The versioned utility installs match CI. `cargo-audit` 0.22.2 and `actionlint` are needed for
+advisory and workflow checks. Update utility versions in CI and this guide together.
 
-- Use your preferred version control tool and keep commit messages short and imperative (for
-  example, `Add terminal markers for FooTerm`).
-- Prefer small, buildable steps. Run `cargo check -p detect-terminal` after refactors or detection
-  changes.
-- Keep documentation aligned with behavior; update README and crate docs when detection rules
-  change.
-- When you change doc comments, run `cargo doc -p detect-terminal` to keep docs.rs output current.
+## Development Checks
 
-## Running Commands
+```sh
+just fmt
+just check
+```
 
-- Install `just`, `rumdl`, and the nightly Rust toolchain with its rustfmt component.
-- Run `just check` before sharing changes. It checks formatting, tests, Clippy, and Rustdoc for the
-  whole workspace.
-- Run `just fmt` to format Rust and Markdown, or `just --list` for individual recipes.
-- `cargo check -p detect-terminal` validates the library build.
-- `cargo test -p detect-terminal` runs unit tests and doc tests.
-- `cargo doc -p detect-terminal` rebuilds docs.rs-style output.
-- `cargo run -p detect-terminal-cli -- --format json --pretty` runs the CLI.
+`just check` validates Rust and Markdown formatting, runs workspace tests and doctests, rejects
+Clippy warnings, and builds public and private Rustdoc with warnings treated as errors. Use
+`just --list` for focused recipes. `cargo check -p detect-terminal` provides a quick library check.
 
-## Detection Changes
+Run the CLI with `cargo run -p detect-terminal-cli -- --json --pretty`. It uses environment-only
+detection unless `--commands` is supplied.
 
-When adding a terminal or multiplexer:
+## Changing Behavior
 
-1. Add env markers in `crates/detect-terminal/src/detect.rs`.
-1. Document markers in `crates/detect-terminal/src/terminal.rs` or
-   `crates/detect-terminal/src/multiplexer.rs`.
-1. Add a test case in `crates/detect-terminal/src/detect.rs` using `rstest`.
-1. Update `README.md` if the new item should be listed in the supported tables.
-1. Keep the detection narrative and edge cases in the crate docs
-   (`crates/detect-terminal/src/lib.rs`), not in private modules.
+1. Establish the marker or command behavior from a product reference or recorded observation.
+1. State the expected result and how it interacts with existing precedence.
+1. Add deterministic regression cases, including relevant failure or ambiguity cases.
+1. Implement the smallest coherent change and update the owning API docs and CLI contract.
+1. Run the checks appropriate to the change and describe remaining platform or integration gaps.
 
-## Detection Strategy
+Follow [Rust conventions](docs/rust-conventions.md), [Writing documentation](docs/documentation.md),
+and [Rustdoc contracts](docs/rustdoc.md). Use [Testing](docs/testing.md) to choose evidence and
+[Releasing](docs/releasing.md) for release gates. These guides apply to ordinary code changes as
+well as dedicated documentation work.
 
-The canonical detection strategy is documented in the crate-level docs under `Detection Logic` in
-`crates/detect-terminal/src/lib.rs`.
+## Dependencies and Releases
 
-## Testing Strategy
+Dependabot groups weekly Cargo lockfile updates and monthly GitHub Actions updates. Changes that
+require wider or higher manifest requirements are reviewed separately. A lockfile refresh must not
+silently raise the supported Rust version or change the public API's dependency integration.
 
-When extending detection, add tests that mirror real env combinations and keep them deterministic.
-
-- Use `rstest` cases in `crates/detect-terminal/src/detect.rs`.
-- Provide inputs via `EnvMap` (`BTreeMap<OsString, OsString>`).
-- Prefer `detect_with_options` when you need to control command probing or env capture explicitly.
-- When testing command probes, inject a custom `CommandRunner` with a stable output map.
-- Add parsing tests for tmux/screen/zellij outputs as needed.
-- Run `cargo test -p detect-terminal` to exercise unit tests and doc tests.
-
-## Documentation and Style
-
-- Keep Markdown line length at 100 characters and lint with `markdownlint-cli2`.
-- Use fenced code blocks with language tags.
-- Prefer descriptive module names over generic buckets (avoid `types.rs`).
-- Avoid multiline struct literals in function arguments; bind a local variable.
-- Preserve `println!("{}", x.y)` style where field access is printed; otherwise prefer inline format
-  strings.
-- In `TerminalKind` docs, include the proper product name and website URL on the first line, then a
-  blank line before details.
-- Keep `TerminalKind` display names aligned with product naming (Terminal.app, iTerm2, Visual Studio
-  Code Terminal).
-
-## Documentation Rubric
-
-Use this rubric to evaluate crate-level docs, README content, and public API docs for
-`detect-terminal`.
-
-### First-time User Success
-
-- A reader can answer what the crate does, what it returns, and how to use it in two minutes.
-- There is a minimal happy-path example and a targeted debugging example.
-
-### Clear Hierarchy
-
-- The structure follows purpose → usage → concepts → behavior → options → diagnostics → extension.
-- Each section answers one question and does not mix unrelated concerns.
-
-### Non-redundancy
-
-- No section repeats content from another section.
-- Each section adds unique, concrete guidance.
-
-### Actionability
-
-- Examples use realistic values and explain how to interpret outputs.
-- Warnings include a clear mitigation or opt-out behavior.
-
-### Edge-case Clarity
-
-- At least two edge cases are documented and tied to real scenarios.
-
-## Documentation Lenses (Ongoing Maintenance)
-
-Use these lenses to keep docs practical and to surface gaps:
-
-- **First-time user**: clarify purpose, supported coverage, and expected outputs.
-- **Side effects**: call out command execution and how to disable it.
-- **Data model**: explain program identity vs emulation identity (`TERM_PROGRAM` vs `TERM`).
-- **Environment variability**: describe tmux/screen/zellij/SSH effects and fallbacks.
-- **Testing/repro**: highlight deterministic paths (`detect_from_env`) and fixtures.
-- **Extensibility**: explain where to add detection rules and tests.
-- **Output consumption**: show how to use `TerminalInfo` fields and debug data.
-- **Decision hierarchy**: outline precedence (mux first, program markers, TERM fallbacks) and
-  notable edge cases.
-
-## Documentation Plan
-
-Moved from `PLAN.md` to keep guidance centralized.
-
-- Provide a concise README with purpose, usage examples, and notes on command probing.
-- Keep documentation structured and direct, without template-heavy sections.
-- Add a docs.rs-friendly narrative with examples that explain realistic values.
-- Keep supported terminals/multiplexers discoverable in docs and README.
-- Include troubleshooting and extension guidance.
+Keep fixes and maintenance in reviewable `jj` changes. Describe the problem and resulting behavior
+with an imperative summary. Include validation and limitations when requesting review. The project
+is licensed under MIT OR Apache-2.0; contributions must be compatible with that choice.
