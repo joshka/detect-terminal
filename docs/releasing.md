@@ -1,76 +1,83 @@
 # Releasing
 
-A release candidate must meet the criteria below. Local checks establish local readiness; hosted
-platform results and registry access are separate gates before publishing.
+The workspace publishes two crates at a shared version: the `detect-terminal` library and the
+`detect-terminal-cli` package, which installs the `detect-terminal` executable. Releases are manual;
+CI validates changes but does not upload crates or create releases.
 
-## Acceptance Criteria
+Use current stable Cargo for packaging and publishing. The minimum supported compiler is a separate
+compatibility requirement; see [Contributing](../CONTRIBUTING.md#setup) for the MSRV policy and tool
+setup.
 
-| Criterion                            | Required evidence                                                                                                   |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
-| Detection is predictable             | Tests cover recognized hints, precedence, empty/unknown values, and near-miss `TERM` names                          |
-| Evidence is truthful                 | Matching identifiers and sources name the actual environment key or successful command                              |
-| Defaults have bounded work           | Default detection reads only the environment; blocking commands require explicit opt-in                             |
-| Probe failures degrade clearly       | Missing tools, nonzero exits, and malformed output leave metadata absent and retain diagnostics                     |
-| Public contracts are clear           | Defaults, encoding, partial results, capture limits, and emulation uncertainty are documented                       |
-| CLI is usable in scripts             | Argument, JSON, human output, and broken-pipe tests pass; JSON schema version is documented                         |
-| Workspace checks pass                | `just check` passes with warning-free public/private Rustdoc and strict Clippy                                      |
-| Supported compiler works             | `just msrv` passes on the declared MSRV; CI also checks it with Clippy                                              |
-| Supported hosts work                 | Native Linux, macOS, and Windows CI tests pass for the exact release revision                                       |
-| Dependency maintenance is controlled | Lockfile updates pass checks; advisories are reviewed; manifest requirement changes are deliberate                  |
-| Archives are self-contained          | `just package` verifies both crates; extracted archives contain README, license texts, source, and correct metadata |
-| Published metadata is accurate       | License, repository, descriptions, versions, MSRV, and the CLI's library requirement match the release              |
-| Release is reviewable                | Every change has a purpose, there are no conflicts or unintended files, and release notes describe shipped behavior |
-| Publication is possible              | Repository exists, crate names and owner access are confirmed, and publish dry-run succeeds                         |
+## Prepare the Release
 
-The current MSRV is Rust 1.88. The policy allows moving to the previous stable release when a real
-implementation or dependency requirement arises. It does not require a bump for every release.
+1. Review changes since the previous release for API compatibility, detection precedence, command
+   behavior, CLI arguments, and JSON output. Choose a version that reflects their impact on callers.
+1. Set `workspace.package.version` in the root `Cargo.toml` and update the CLI's `detect-terminal`
+   dependency requirement in `crates/detect-terminal-cli/Cargo.toml` to the release version. Both
+   packages inherit the workspace version. Refresh their lockfile entries with
+   `cargo check --workspace` and inspect the diff for unrelated dependency changes.
+1. Turn the Unreleased section in `CHANGELOG.md` into release notes with the version and date.
+   Explain behavior changes and any migration steps. Align the README, CLI help, and Rustdoc with
+   what ships.
+1. Confirm the repository URL and package metadata are accurate. Before the first release, create
+   the public repository and confirm that both crate names are available. For later releases,
+   confirm publishing access to both existing crates.
+1. Commit the release preparation and push the revision for CI. Publish from a clean checkout of
+   that exact revision.
 
-## Local Validation
+## Validate the Candidate
+
+Run these checks from the workspace root:
 
 ```sh
 just check
 just msrv
 just ci-check
-just deny
 just zizmor
+just deny
 just package
 cargo publish --workspace --dry-run --locked
 ```
 
-Packaging and workspace dry-run use current stable Cargo. They test the CLI against the library
-archive through Cargo's temporary registry, including before the first library version exists on
-crates.io. On a working change, `cargo package --workspace --allow-dirty --locked` can validate the
-current files; review the actual revision before publishing.
+Provide `GH_TOKEN` when running zizmor locally to include its online audits. CI supplies a read-only
+GitHub token. Wait for every CI job to pass on the release revision, including native Linux, macOS,
+and Windows tests and the MSRV job. A local run establishes only the platforms it actually tested.
 
-Inspect `target/package/*.crate`, not only the source checkout. Each crate links to the root license
-texts so Cargo includes them in the archive. The library README is included from the workspace root;
-the CLI has its own installation and output contract. Confirm the normalized manifests refer to the
-registry version of `detect-terminal` rather than a checkout-only path.
+Review the following before approving publication:
 
-## Publication
+- Detection tests cover changed markers, precedence, unknown inputs, and probe failures. Matching
+  identifiers name the actual input, and command execution remains opt-in.
+- Public docs explain defaults, partial results, encoding, and emulation uncertainty. CLI tests
+  cover argument handling, JSON contracts, and output failures.
+- Dependency policy checks pass, and any exceptions have a specific rationale. Dependency updates
+  preserve the declared MSRV and intended downstream behavior.
+- Release notes describe the changes users receive, and the checkout has no unrelated edits.
 
-1. Review the commits and update the Unreleased notes with the version and release date.
-1. Confirm the GitHub repository and remote, publish the reviewed revision, and wait for all CI
-   jobs.
-1. Recheck crate-name availability and publishing permissions. A name being available earlier is not
-   a reservation.
-1. Run the local gates and publish dry-run against that revision.
-1. Publish the workspace with current stable Cargo. It orders the library before the CLI dependency.
-1. Verify the published library docs and install the CLI from crates.io in a fresh location.
-1. Tag the released revision and publish release notes tied to that revision.
+Inspect both archives in `target/package/`. Each must contain its README, license texts, and source.
+Check the normalized `Cargo.toml` files for the release version, MSRV, license, and repository URL.
+The CLI archive must depend on the registry version of `detect-terminal`, without a checkout-only
+path. Workspace packaging verifies the CLI against the library archive through Cargo's temporary
+registry, including before the library's first publication.
 
-Publishing is a separate maintainer action. Neither the justfile nor CI uploads crates or creates a
-release automatically.
+Record the revision and check results in the release review. If source, metadata, or dependencies
+change after validation, rerun the affected checks and require CI on the new revision.
 
-## Current Candidate Evidence
+## Publish and Verify
 
-As of 2026-09-26, local macOS validation passed on stable Rust and Rust 1.88: 73 library tests, one
-CLI unit test, six CLI integration tests, and 11 doctests. Strict Clippy, public and private
-Rustdoc, formatting checks, workflow syntax validation, the dependency advisory audit, archive
-verification, and the workspace publish dry-run also passed. The archives contain the license texts
-and registry dependency metadata.
+With publishing credentials configured for crates.io, run:
 
-Native Linux and Windows CI results are still required. The intended repository is
-`joshka/detect-terminal`; it did not exist at the readiness check. Both crate names returned
-not-found from crates.io at that time. These observations do not establish future availability or
-publishing permissions. No crates have been published by this cleanup.
+```sh
+cargo publish --workspace --locked
+```
+
+Cargo publishes the library before the CLI that depends on it. If publication stops partway through,
+check which versions reached crates.io before retrying. Published versions cannot be overwritten;
+fixes to an uploaded package require a new version.
+
+1. Confirm both versions are visible on crates.io and that docs.rs builds the library successfully.
+1. Install the CLI from crates.io into a fresh location, selecting the released version explicitly
+   with `cargo install detect-terminal-cli --version <version> --locked --root <directory>`.
+1. Run the installed executable with `--help` and `--json`. Confirm the output matches the
+   documented contract; terminal identity will depend on the environment where it runs.
+1. Tag the validated revision as `v<version>` and create a GitHub release using the changelog notes.
+1. Restore an empty Unreleased section for subsequent changes.

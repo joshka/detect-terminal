@@ -8,12 +8,9 @@ Detection is a best effort: inherited variables can be stale, and generic `TERM`
 emulation family rather than the actual application. It does not query escape sequences or measure
 terminal capabilities.
 
-## Status and Requirements
+## Requirements
 
-This checkout is the 0.1.0 release candidate. It requires Rust 1.88 or newer. Linux, macOS, and
-Windows are the intended CI platforms; consult the
-[release checklist](https://github.com/joshka/detect-terminal/blob/main/docs/releasing.md) for the
-gates required before publishing.
+Rust 1.88 or newer.
 
 ## Library
 

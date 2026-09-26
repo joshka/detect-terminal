@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-Initial 0.1.0 release candidate:
+Initial release:
 
 - Identify terminal applications from program markers and retain raw program and terminfo values.
 - Report tmux, GNU Screen, and Zellij separately from terminal identity.
