@@ -27,8 +27,8 @@ asserting every whitespace detail unless formatting itself is the contract.
 | Public API or examples        | Workspace tests, public and private Rustdoc                             |
 | CLI                           | Binary integration tests, output error tests, help and README alignment |
 | Markdown                      | Prose review and `just fmt-md-check`                                    |
-| Dependency or MSRV            | Stable checks, `just msrv`, `just audit`, package verification          |
-| CI                            | `just ci-check` locally and a successful hosted run                     |
+| Dependency or MSRV            | Stable checks, `just msrv`, `just deny`, package verification           |
+| CI                            | `just ci-check` and `just zizmor` locally and a successful hosted run   |
 | Release                       | Every gate in [Releasing](releasing.md)                                 |
 
 Use `just check` before handing off an implementation change. Broaden validation when a failure or

@@ -20,8 +20,15 @@ cargo install just --version 1.58.0 --locked
 cargo install rumdl --version 0.2.77 --locked
 ```
 
-The versioned utility installs match CI. `cargo-audit` 0.22.2 and `actionlint` are needed for
-advisory and workflow checks. Update utility versions in CI and this guide together.
+For dependency policy and workflow security checks, also install:
+
+```sh
+cargo install cargo-deny --version 0.20.2 --locked
+cargo install zizmor --version 1.26.1 --locked
+```
+
+The versioned utility installs match CI. `actionlint` is needed for workflow syntax checks. Update
+utility versions in CI and this guide together.
 
 ## Development Checks
 
@@ -52,9 +59,21 @@ well as dedicated documentation work.
 
 ## Dependencies and Releases
 
-Dependabot groups weekly Cargo lockfile updates and monthly GitHub Actions updates. Changes that
-require wider or higher manifest requirements are reviewed separately. A lockfile refresh must not
-silently raise the supported Rust version or change the public API's dependency integration.
+Dependabot groups weekly Cargo updates and monthly GitHub Actions updates, with a seven-day
+cooldown. Cargo uses `increase-if-necessary`: compatible releases update the lockfile, and
+requirements change only when they exclude the new release. Review manifest changes for MSRV and
+public API impact.
+
+Run `just deny` to check RustSec advisories, licenses (including development dependencies),
+duplicate versions, wildcard requirements, and dependency sources. `deny.toml` permits MIT,
+Apache-2.0, and Unicode-3.0 licenses and crates.io registry dependencies. Findings and warnings fail
+CI; exceptions must be narrow and explain why they are acceptable. This replaces the separate
+cargo-audit check.
+
+Run `just zizmor` for workflow and Dependabot security checks and `just ci-check` for workflow
+syntax. CI runs zizmor with its pedantic rules and a read-only GitHub token for online audits. Local
+runs can use `GH_TOKEN` for the same online coverage; offline-only checks do not establish that
+coverage.
 
 Keep fixes and maintenance in reviewable `jj` changes. Describe the problem and resulting behavior
 with an imperative summary. Include validation and limitations when requesting review. The project

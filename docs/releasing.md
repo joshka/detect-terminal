@@ -31,7 +31,8 @@ implementation or dependency requirement arises. It does not require a bump for 
 just check
 just msrv
 just ci-check
-just audit
+just deny
+just zizmor
 just package
 cargo publish --workspace --dry-run --locked
 ```

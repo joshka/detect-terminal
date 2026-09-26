@@ -51,10 +51,14 @@ msrv:
 package:
     cargo package --workspace --locked
 
-# Check the lockfile against current RustSec advisories.
-audit:
-    cargo audit --deny warnings
-
 # Validate GitHub Actions syntax and embedded shell scripts.
 ci-check:
     actionlint
+
+# Audit workflows and Dependabot configuration, including pedantic findings.
+zizmor:
+    zizmor --no-progress --strict-collection --persona pedantic .github
+
+# Check advisories, licenses, duplicate versions, and dependency sources.
+deny:
+    cargo deny --workspace --all-features --locked check --deny warnings
