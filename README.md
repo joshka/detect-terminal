@@ -15,17 +15,16 @@ Rust 1.88 or newer.
 ## Library
 
 ```rust
-use detect_terminal::{EnvMap, TerminalKind, detect_from_env};
+let info = detect_terminal::detect();
+println!("Terminal: {}", info.kind);
 
-let env = EnvMap::from([
-    ("TERM_PROGRAM".into(), "ghostty".into()),
-    ("TERM".into(), "xterm-ghostty".into()),
-]);
-let info = detect_from_env(&env);
-assert_eq!(info.kind, TerminalKind::Ghostty);
+if let Some(multiplexer) = info.multiplexer {
+    println!("Multiplexer: {}", multiplexer.kind);
+}
 ```
 
-Use `detect()` for the current environment. Both entry points are environment-only by default.
+`detect()` reads the current process environment without running commands. Use `detect_from_env()`
+when you already have an environment snapshot or need controlled inputs for a test.
 `detect_with_options()` can opt into blocking tmux, screen, and zellij commands; those commands have
 no timeout. Unknown values remain available in the result.
 

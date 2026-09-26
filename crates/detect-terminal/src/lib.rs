@@ -8,15 +8,12 @@
 //! # Usage
 //!
 //! ```
-//! use detect_terminal::{EnvMap, TerminalKind, detect_from_env};
+//! let info = detect_terminal::detect();
+//! println!("Terminal: {}", info.kind);
 //!
-//! let env = EnvMap::from([
-//!     ("TERM_PROGRAM".into(), "ghostty".into()),
-//!     ("TERM".into(), "xterm-ghostty".into()),
-//! ]);
-//! let info = detect_from_env(&env);
-//! assert_eq!(info.kind, TerminalKind::Ghostty);
-//! assert_eq!(info.term.as_deref(), Some("xterm-ghostty"));
+//! if let Some(multiplexer) = info.multiplexer {
+//!     println!("Multiplexer: {}", multiplexer.kind);
+//! }
 //! ```
 //!
 //! # Program identity and terminal emulation
