@@ -33,10 +33,14 @@ use std::fmt;
 ///     println!("multiplexer: {kind}", kind = mux.kind);
 /// }
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum MultiplexerKind {
+    /// GNU Screen, selected by a nonempty `STY`.
     Screen,
+    /// tmux, selected by a nonempty `TMUX`.
     Tmux,
+    /// Zellij, selected by a nonempty `ZELLIJ`.
     Zellij,
 }
 

@@ -5,9 +5,8 @@ use std::ffi::OsString;
 ///
 /// This is the input type consumed by [`detect_from_env`] and
 /// [`detect_with_options`]. Keys and values are stored as `OsString` to match
-/// how the OS represents environment variables, and the map is copied so tests
-/// can construct their own detection inputs.
-/// A `BTreeMap` is used so iteration is stable for debugging and tests.
+/// how the OS represents environment variables, and callers can construct their own detection
+/// inputs. A `BTreeMap` is used so iteration is stable for debugging and tests.
 ///
 /// # Example
 ///
@@ -29,6 +28,8 @@ pub type EnvMap = BTreeMap<OsString, OsString>;
 /// still performing lookups from the original map. Captured keys become
 /// [`TerminalInfo::raw_env_subset`] so callers can audit which markers were
 /// queried.
+///
+/// [`TerminalInfo::raw_env_subset`]: crate::TerminalInfo::raw_env_subset
 pub(crate) struct EnvView<'a> {
     env: &'a EnvMap,
     capture: bool,
@@ -38,7 +39,7 @@ pub(crate) struct EnvView<'a> {
 impl<'a> EnvView<'a> {
     /// Build a view over the provided environment map.
     ///
-    /// When `capture` is true, any lookup via `get` or `contains_key` is stored
+    /// When `capture` is true, any lookup via `get` is stored
     /// in the internal `used` map for later export.
     pub(crate) fn new(env: &'a EnvMap, capture: bool) -> Self {
         Self {
@@ -53,10 +54,19 @@ impl<'a> EnvView<'a> {
     /// Returns a UTF-8 lossy string for non-Unicode values to keep downstream
     /// detection simple. Returns `None` when the key is absent.
     pub(crate) fn get(&mut self, key: &str) -> Option<String> {
-        let value = self
-            .env
-            .get(&OsString::from(key))
-            .map(|value| value.to_string_lossy().to_string());
+        let value = self.env.get(std::ffi::OsStr::new(key));
+        // Windows treats environment names case-insensitively; prefer the exact spelling when
+        // a synthetic snapshot contains multiple spellings of the same name.
+        #[cfg(windows)]
+        let value = value.or_else(|| {
+            self.env.iter().find_map(|(candidate, value)| {
+                candidate
+                    .to_str()
+                    .filter(|candidate| candidate.eq_ignore_ascii_case(key))
+                    .map(|_| value)
+            })
+        });
+        let value = value.map(|value| value.to_string_lossy().into_owned());
         if self.capture
             && let Some(value) = value.clone()
         {
@@ -65,16 +75,9 @@ impl<'a> EnvView<'a> {
         value
     }
 
-    /// Check whether the environment contains a key, with capture semantics.
-    ///
-    /// This calls `get`, so it captures the key if capture is enabled.
-    pub(crate) fn contains_key(&mut self, key: &str) -> bool {
-        self.get(key).is_some()
-    }
-
     /// Return the captured subset of environment variables.
     ///
-    /// The map includes only keys accessed via `get` or `contains_key`.
+    /// The map includes only keys accessed via `get`.
     pub(crate) fn into_used(self) -> BTreeMap<String, String> {
         self.used
     }

@@ -1,50 +1,35 @@
-/// Options controlling command probing and environment capture.
+/// Controls optional command probes and diagnostic environment capture.
 ///
-/// This struct feeds into [`detect_with_options`] to control the extra debug
-/// output and whether the detector shells out for tmux/screen/zellij metadata.
-/// Defaults enable command probing and env capture so `detect()` returns richer
-/// multiplexer details and [`TerminalInfo::raw_env_subset`] is populated.
-/// Fields default to `true`.
-/// Use `allow_commands = false` for latency-sensitive or sandboxed contexts.
-/// Use `capture_env_subset = false` to avoid retaining sensitive values.
+/// Defaults perform environment-only detection and capture the variables consulted by the
+/// detector. Command probes are opt-in, synchronous, and have no timeout.
+/// `capture_env_subset` controls the diagnostic map; matched identifiers and raw terminal names
+/// remain in the result regardless of this setting.
 ///
 /// # Example
 ///
-/// ```rust
+/// ```no_run
 /// use detect_terminal::{DetectOptions, detect_with_options};
 ///
 /// let env = std::env::vars_os().collect();
 /// let options = DetectOptions {
-///     allow_commands: false,
-///     capture_env_subset: true,
+///     allow_commands: true,
+///     ..DetectOptions::default()
 /// };
 /// let info = detect_with_options(&env, options);
 /// ```
-///
-/// [`detect_with_options`]: crate::detect_with_options
-/// [`TerminalInfo::raw_env_subset`]: crate::TerminalInfo::raw_env_subset
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DetectOptions {
-    /// Allow running tmux/screen/zellij commands for extra metadata.
-    ///
-    /// When disabled, the detector only uses environment variables and skips
-    /// command probes like `tmux -V` or `zellij --version`.
-    ///
-    /// Disabling commands can reduce latency in hot paths.
+    /// Run tmux, screen, or zellij probes using the supplied environment. Defaults to `false`.
     pub allow_commands: bool,
-    /// Capture only the environment variables read during detection.
-    ///
-    /// When enabled, the [`TerminalInfo::raw_env_subset`] map contains
-    /// only the keys accessed by the detector.
-    ///
-    /// [`TerminalInfo::raw_env_subset`]: crate::TerminalInfo::raw_env_subset
+
+    /// Retain accessed environment values in the diagnostic map. Defaults to `true`.
     pub capture_env_subset: bool,
 }
 
 impl Default for DetectOptions {
     fn default() -> Self {
         Self {
-            allow_commands: true,
+            allow_commands: false,
             capture_env_subset: true,
         }
     }

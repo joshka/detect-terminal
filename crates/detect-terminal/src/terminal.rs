@@ -30,13 +30,14 @@ use crate::multiplexer::MultiplexerInfo;
 /// }
 /// ```
 ///
-/// [`detect`]: crate::detect
+/// [`detect`]: crate::detect()
 /// [`detect_from_env`]: crate::detect_from_env
 /// [`detect_with_options`]: crate::detect_with_options
 /// [`DetectOptions::capture_env_subset`]: crate::DetectOptions::capture_env_subset
 /// [`DetectOptions::allow_commands`]: crate::DetectOptions::allow_commands
 /// [`TerminalInfo`]: crate::TerminalInfo
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TerminalKind {
     /// Alacritty terminal emulator. <https://alacritty.org>
     ///
@@ -54,17 +55,13 @@ pub enum TerminalKind {
     ///
     /// Markers: `ConEmuPID`, `ConEmuHWND`.
     ConEmu,
-    /// Windows Console Host (conhost.exe). <https://learn.microsoft.com/en-us/windows/console/>
-    ///
-    /// Markers: `SESSIONNAME=Console` (conservative heuristic).
-    ConHost,
     /// foot terminal emulator. <https://codeberg.org/dnkl/foot>
     ///
-    /// Markers: `FOOT_CLIENT`, `FOOT_MAIN_PID`, `TERM=foot*`.
+    /// Markers: `TERM=foot` and `foot-` variants.
     Foot,
     /// Ghostty terminal emulator. <https://ghostty.org>
     ///
-    /// Markers: `TERM_PROGRAM=ghostty`, `GHOSTTY`, `TERM=xterm-ghostty`.
+    /// Markers: `TERM_PROGRAM=ghostty`, `GHOSTTY_RESOURCES_DIR`, `TERM=xterm-ghostty`.
     Ghostty,
     /// GNOME Terminal. <https://wiki.gnome.org/Apps/Terminal>
     ///
@@ -104,7 +101,7 @@ pub enum TerminalKind {
     Screen,
     /// Simple terminal (st). <https://st.suckless.org>
     ///
-    /// Markers: `TERM=st*`.
+    /// Markers: `TERM=st` and `st-` variants.
     St,
     /// Terminator terminal emulator. <https://gnome-terminator.org>
     ///
@@ -134,10 +131,6 @@ pub enum TerminalKind {
     ///
     /// Markers: `WT_SESSION`, `TERM_PROGRAM=Windows_Terminal`.
     WindowsTerminal,
-    /// Xfce4 Terminal. <https://docs.xfce.org/apps/terminal/start>
-    ///
-    /// Markers: `XFCE4_TERMINAL`.
-    Xfce4Terminal,
     /// xterm terminal emulator. <https://invisible-island.net/xterm/>
     ///
     /// Markers: `XTERM_VERSION`, `TERM=xterm*`.
@@ -153,7 +146,6 @@ impl fmt::Display for TerminalKind {
             TerminalKind::AppleTerminal => "Terminal.app",
             TerminalKind::Cmder => "Cmder",
             TerminalKind::ConEmu => "ConEmu",
-            TerminalKind::ConHost => "Windows Console Host",
             TerminalKind::Foot => "foot",
             TerminalKind::Ghostty => "Ghostty",
             TerminalKind::GnomeTerminal => "GNOME Terminal",
@@ -173,7 +165,6 @@ impl fmt::Display for TerminalKind {
             TerminalKind::Warp => "Warp",
             TerminalKind::WezTerm => "WezTerm",
             TerminalKind::WindowsTerminal => "Windows Terminal",
-            TerminalKind::Xfce4Terminal => "Xfce4 Terminal",
             TerminalKind::Xterm => "xterm",
             TerminalKind::Unknown => "Unknown",
         };
@@ -181,208 +172,113 @@ impl fmt::Display for TerminalKind {
     }
 }
 
-/// Key-value pairs that contributed to detection.
+/// An environment key and value that identified the terminal.
 ///
-/// This provides the explicit environment values used to reach a result in
-/// [`TerminalInfo::identifiers`]. Values come from the same env lookups that
-/// populate [`TerminalInfo::term_program`],
-/// [`TerminalInfo::term_program_version`], and [`TerminalInfo::term`].
-/// Keys and values are only included for markers that matched.
-/// The list is ordered in the sequence detection rules were applied.
-/// It is empty when no markers match.
-///
-/// # Example
-///
-/// ```rust
-/// use detect_terminal::detect;
-///
-/// let info = detect();
-/// for identifier in &info.identifiers {
-///     let key = &identifier.key;
-///     let value = &identifier.value;
-///     println!("{key}={value}");
-/// }
-/// ```
-///
-/// [`TerminalInfo::identifiers`]: crate::TerminalInfo::identifiers
-/// [`TerminalInfo::term_program`]: crate::TerminalInfo::term_program
-/// [`TerminalInfo::term_program_version`]: crate::TerminalInfo::term_program_version
-/// [`TerminalInfo::term`]: crate::TerminalInfo::term
+/// Command-derived matches have a [`DetectionSource::Command`] and no environment identifier.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Identifier {
-    /// Environment variable name that contributed to detection.
+    /// Name of the matching variable.
     pub key: String,
-    /// Environment variable value that contributed to detection.
+
+    /// Lossily decoded value of the matching variable.
     pub value: String,
 }
 
-/// Sources used to identify the terminal or multiplexer.
-///
-/// Stored in [`TerminalInfo::detected_via`] alongside
-/// [`TerminalInfo::identifiers`] for debugging. Command sources correspond to
-/// entries in [`TerminalInfo::command_probes`] by their command string.
-/// Sources are ordered by the matching sequence in the detector.
-/// The list is empty when no markers match.
-///
-/// # Example
-///
-/// ```rust
-/// use detect_terminal::{DetectionSource, detect};
-///
-/// let info = detect();
-/// if info
-///     .detected_via
-///     .iter()
-///     .any(|source| matches!(source, DetectionSource::EnvVar(_)))
-/// {
-///     println!("env var used");
-/// }
-/// ```
-///
-/// [`TerminalInfo::detected_via`]: crate::TerminalInfo::detected_via
-/// [`TerminalInfo::identifiers`]: crate::TerminalInfo::identifiers
+/// Evidence for the selected terminal kind, separate from multiplexer metadata.
+#[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DetectionSource {
+    /// The full diagnostic command string of a successful probe.
     Command(String),
+    /// The matching environment key, using the detector's canonical spelling.
     EnvVar(String),
 }
 
 impl fmt::Display for DetectionSource {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            DetectionSource::Command(command) => write!(formatter, "command: {command}"),
-            DetectionSource::EnvVar(key) => write!(formatter, "env: {key}"),
+            Self::Command(command) => write!(formatter, "command: {command}"),
+            Self::EnvVar(key) => write!(formatter, "env: {key}"),
         }
     }
 }
 
-/// Results from a command probe when command execution is enabled.
+/// A completed or failed command attempt, recorded in execution order.
 ///
-/// This is populated when [`DetectOptions::allow_commands`] is true.
-/// Each probe
-/// stores the invoked command and captured output for auditing.
-/// [`CommandProbe::stdout`] and [`CommandProbe::stderr`] are trimmed and
-/// UTF-8 lossy.
-/// The list is ordered by execution time and is empty when probes are disabled.
-///
-/// # Example
-///
-/// ```rust
-/// use detect_terminal::detect;
-///
-/// let info = detect();
-/// for probe in &info.command_probes {
-///     let command = &probe.command;
-///     let stdout = &probe.stdout;
-///     println!("{command} -> {stdout}");
-/// }
-/// ```
-///
-/// [`DetectOptions::allow_commands`]: crate::DetectOptions::allow_commands
-/// [`CommandProbe::stderr`]: crate::CommandProbe::stderr
-/// [`CommandProbe::stdout`]: crate::CommandProbe::stdout
+/// `stdout` and `stderr` are trimmed and decoded lossily. Output from unsuccessful commands is
+/// retained for diagnostics but cannot supply detected metadata. See the crate's
+/// [probe contract](crate#optional-command-probes) for execution behavior.
+#[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommandProbe {
-    /// Command line that was executed.
+    /// Diagnostic command string. Arguments are joined by spaces, without shell escaping.
     pub command: String,
-    /// Standard output captured from the probe.
+
+    /// Captured standard output, empty when execution failed before collection.
     pub stdout: String,
-    /// Standard error captured from the probe.
+
+    /// Captured standard error, empty when execution failed before collection.
     pub stderr: String,
-    /// Exit status code from the probe, when available.
+
+    /// Exit code, or `None` for a signal termination or execution failure.
     pub status: Option<i32>,
+
+    /// Process creation or output collection error, if any.
+    pub error: Option<String>,
 }
 
-/// Full detection result including debug data for auditability.
+/// Terminal identity, multiplexer metadata, and the evidence used to select them.
 ///
-/// This is returned by [`detect`], [`detect_from_env`], and
-/// [`detect_with_options`]. Fields that reflect environment values are always
-/// derived from the current or provided env map, regardless of whether a
-/// terminal kind is identified.
-/// [`TerminalInfo::multiplexer`] is independent from [`TerminalInfo::kind`] and
-/// may be present when `kind` is [`TerminalKind::Unknown`].
-/// [`TerminalInfo::kind`] is [`TerminalKind::Unknown`] when no terminal markers
-/// match, but [`TerminalInfo::term_program`] and [`TerminalInfo::term`] can
-/// still be populated.
-///
-/// # Example
-///
-/// ```rust
-/// use detect_terminal::detect;
-///
-/// let info = detect();
-/// println!("terminal: {kind:?}", kind = info.kind);
-/// ```
-///
-/// [`detect`]: crate::detect
-/// [`detect_from_env`]: crate::detect_from_env
-/// [`detect_with_options`]: crate::detect_with_options
-#[derive(Debug, Clone)]
+/// Returned by [`detect`](crate::detect()), [`detect_from_env`](crate::detect_from_env), and
+/// [`detect_with_options`](crate::detect_with_options). Raw environment values are retained even
+/// when no kind is recognized. A known multiplexer does not imply a known terminal application.
+/// See [Detection logic](crate#detection-logic) for how conflicting hints are resolved.
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TerminalInfo {
-    /// Detected terminal emulator kind.
+    /// Application or emulation family selected from the available hints.
     pub kind: TerminalKind,
-    /// Terminal version when reported by environment markers.
+
+    /// `TERM_PROGRAM_VERSION` only when `TERM_PROGRAM` identified the selected kind.
     ///
-    /// This currently uses `TERM_PROGRAM_VERSION` when present and does not
-    /// attempt to parse other env-specific version formats.
-    /// It may be `None` even when [`TerminalInfo::term_program`] is present.
+    /// A fallback match never borrows a version belonging to another application or multiplexer.
     pub version: Option<String>,
-    /// `TERM_PROGRAM` when provided by the terminal (program identity).
-    ///
-    /// This identifies the terminal application, for example `iTerm.app`.
-    /// It may be `None` when the terminal does not set `TERM_PROGRAM`.
+
+    /// Raw `TERM_PROGRAM`, including unknown or empty values.
     pub term_program: Option<String>,
-    /// `TERM_PROGRAM_VERSION` when provided by the terminal.
-    ///
-    /// This is a raw string value reported by the terminal app.
-    /// It may be `None` if the terminal does not provide a version.
+
+    /// Raw `TERM_PROGRAM_VERSION`, including when its owner is unknown.
     pub term_program_version: Option<String>,
-    /// `TERM` value describing emulation capabilities (emulation identity).
-    ///
-    /// This describes how the terminal wants to be treated by applications,
-    /// for example `xterm-ghostty` or `screen-256color`.
-    /// It may be `None` in minimal environments.
+
+    /// Raw `TERM` describing the emulation environment.
     pub term: Option<String>,
-    /// Raw name from `TERM_PROGRAM` or `TERM`, when available.
+
+    /// Raw `TERM_PROGRAM` if present, otherwise `TERM`.
     ///
-    /// This is a quick, best-effort label when a specific terminal kind is not
-    /// identified.
-    /// It prefers `TERM_PROGRAM` over `TERM`.
+    /// This convenience label can name something different from the selected kind.
     pub raw_name: Option<String>,
-    /// Multiplexer details if a tmux/screen/zellij session was detected.
-    ///
-    /// Multiplexer detection is independent of the terminal kind.
-    /// It may be `None` even when `TERM` looks like `screen*`.
+
+    /// One selected multiplexer, independently of the terminal match.
     pub multiplexer: Option<MultiplexerInfo>,
-    /// Sources that contributed to the final detection result.
-    ///
-    /// Values correspond to either env keys or command probes used by the
-    /// detector.
-    /// The list can be empty when no markers match.
+
+    /// Evidence for the terminal match, empty when the kind is unknown.
     pub detected_via: Vec<DetectionSource>,
-    /// Environment identifiers used to reach the result.
-    ///
-    /// This is a curated subset of env key/value pairs that matched a detector
-    /// rule.
-    /// The list can be empty when no markers match.
+
+    /// Matching environment key/value pairs, empty for unknown or command-derived matches.
     pub identifiers: Vec<Identifier>,
-    /// Subset of the environment variables read during detection.
+
+    /// Existing variables consulted during detection, when diagnostic capture is enabled.
     ///
-    /// This is populated when [`DetectOptions::capture_env_subset`] is enabled.
-    /// The map is empty when capture is disabled.
-    ///
-    /// [`DetectOptions::capture_env_subset`]: crate::DetectOptions::capture_env_subset
+    /// Absent keys and unrelated variables are omitted. Disabling capture does not redact the
+    /// other fields in this result. Values may contain session identifiers and paths.
     pub raw_env_subset: BTreeMap<String, String>,
-    /// Command probe output collected during detection.
-    ///
-    /// This is populated when [`DetectOptions::allow_commands`] is enabled.
-    /// The list is empty when command probes are disabled.
-    ///
-    /// [`DetectOptions::allow_commands`]: crate::DetectOptions::allow_commands
+
+    /// All attempted probes, empty when command execution is disabled or no mux marker matches.
     pub command_probes: Vec<CommandProbe>,
 }
 
 impl TerminalInfo {
+    /// Start an empty result before assigning environment and probe evidence.
     pub(crate) fn unknown() -> Self {
         Self {
             kind: TerminalKind::Unknown,

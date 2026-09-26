@@ -1,193 +1,107 @@
-//! Detect terminal emulators and multiplexers from environment variables with
-//! optional command probes.
+//! Identify terminal applications and multiplexers from environment hints.
 //!
-//! The detector returns a [`TerminalInfo`] with a primary terminal kind, optional
-//! multiplexer metadata, and debug-friendly details
-//! ([`TerminalInfo::identifiers`], [`TerminalInfo::detected_via`], and
-//! [`TerminalInfo::command_probes`]). Supported terminals are listed in
-//! [`TerminalKind`]; multiplexers are listed in [`MultiplexerKind`]. The list is
-//! not exhaustive; rely on [`TerminalInfo::term_program`] and
-//! [`TerminalInfo::term`] when a terminal is [`TerminalKind::Unknown`]. The
-//! `detect-terminal-cli` crate provides a CLI for quick inspection.
+//! [`detect()`] reads the current environment; [`detect_from_env`] accepts a snapshot for
+//! repeatable detection. Both return [`TerminalInfo`] without running commands.
+//! [`detect_with_options`] can opt into synchronous multiplexer probes. The library has no runtime
+//! dependencies.
 //!
 //! # Usage
 //!
-//! ```rust
-//! use detect_terminal::{
-//!     DetectOptions, TerminalKind, detect, detect_from_env, detect_with_options,
-//! };
-//!
-//! let info = detect();
-//! if info.kind == TerminalKind::ITerm2 {
-//!     println!("iTerm2 detected");
-//! }
-//!
-//! let env = std::env::vars_os().collect();
-//! let _info = detect_from_env(&env);
-//!
-//! let options = DetectOptions {
-//!     allow_commands: true,
-//!     capture_env_subset: true,
-//! };
-//! let info = detect_with_options(&env, options);
-//! println!("terminal: {kind}", kind = info.kind);
 //! ```
+//! use detect_terminal::{EnvMap, TerminalKind, detect_from_env};
 //!
-//! # Concepts
-//!
-//! ## Program vs Emulation
-//!
-//! Use this when you need to distinguish the application from the emulation
-//! contract it presents to programs. For example, Ghostty can report
-//! [`TerminalInfo::term_program`] as `ghostty` while advertising
-//! [`TerminalInfo::term`] as `xterm-ghostty`.
-//!
-//! ```rust
-//! use detect_terminal::detect;
-//!
-//! let info = detect();
-//! println!("program: {program:?}", program = info.term_program);
-//! println!("emulation: {emulation:?}", emulation = info.term);
-//! ```
-//!
-//! ## Multiplexer Layer
-//!
-//! Multiplexers are detected separately from the terminal emulator. A tmux
-//! session reports a mux kind of `tmux`, while the underlying terminal is still
-//! identified by [`TerminalInfo::kind`].
-//!
-//! ```rust
-//! use detect_terminal::detect;
-//!
-//! let info = detect();
-//! if let Some(mux) = info.multiplexer {
-//!     println!("mux: {kind}", kind = mux.kind);
-//!     println!("mux version: {version:?}", version = mux.version);
-//! }
-//! ```
-//!
-//! # Detection Logic
-//!
-//! The detector runs in two phases:
-//!
-//! - Multiplexer detection first: looks for `TMUX`, `ZELLIJ`, or `STY`. When command probing is
-//!   enabled, it shells out to gather version metadata and tmux client term details.
-//! - Terminal detection second: prefers explicit program markers (for example,
-//!   `TERM_PROGRAM=WezTerm`, `WT_SESSION`) before falling back to `TERM` heuristics (for example,
-//!   `TERM=xterm-ghostty`).
-//!
-//! The multiplexer result is stored separately in [`TerminalInfo::multiplexer`]
-//! and does not override the terminal emulator. When command probing is
-//! enabled, tmux client term data is captured in
-//! [`MultiplexerInfo::client_term`] and [`MultiplexerInfo::client_type`].
-//!
-//! `TERM_PROGRAM`, `TERM_PROGRAM_VERSION`, and `TERM` are recorded whenever
-//! present, even when the terminal kind is [`TerminalKind::Unknown`]. These
-//! values let you distinguish program identity (for example, `ghostty`) from
-//! emulation identity (for example, `xterm-ghostty`).
-//!
-//! ## Examples
-//!
-//! Example: tmux inside Ghostty. `TERM_PROGRAM` still identifies Ghostty while
-//! `TERM` reflects tmux's emulation choice, and mux metadata is reported
-//! separately.
-//!
-//! ```rust
-//! use std::collections::BTreeMap;
-//! use std::ffi::OsString;
-//!
-//! use detect_terminal::detect_from_env;
-//!
-//! let mut env = BTreeMap::new();
-//! let tmux_path = "/tmp/tmux-1000/default,1234,0";
-//! env.insert(OsString::from("TMUX"), OsString::from(tmux_path));
-//! env.insert(OsString::from("TERM_PROGRAM"), OsString::from("ghostty"));
-//! env.insert(OsString::from("TERM"), OsString::from("screen-256color"));
-//!
+//! let env = EnvMap::from([
+//!     ("TERM_PROGRAM".into(), "ghostty".into()),
+//!     ("TERM".into(), "xterm-ghostty".into()),
+//! ]);
 //! let info = detect_from_env(&env);
-//! assert_eq!(info.multiplexer.unwrap().kind.to_string(), "tmux");
-//! assert_eq!(info.term_program.as_deref(), Some("ghostty"));
-//! assert_eq!(info.term.as_deref(), Some("screen-256color"));
+//! assert_eq!(info.kind, TerminalKind::Ghostty);
+//! assert_eq!(info.term.as_deref(), Some("xterm-ghostty"));
 //! ```
 //!
-//! Example: no program markers. The detector falls back to `TERM` heuristics.
+//! # Program identity and terminal emulation
 //!
-//! ```rust
-//! use std::collections::BTreeMap;
-//! use std::ffi::OsString;
+//! `TERM_PROGRAM` names an application; `TERM` names its terminfo description. Many applications
+//! use `TERM=xterm-256color`, so an [`Xterm`](TerminalKind::Xterm) fallback identifies an emulation
+//! family, not proof that the application is xterm. Prefer explicit program markers when present.
+//! [`TerminalInfo::detected_via`] explains the chosen match, and raw values remain available even
+//! when [`TerminalInfo::kind`] is [`Unknown`](TerminalKind::Unknown).
 //!
-//! use detect_terminal::detect_from_env;
+//! Environment hints may be inherited, overridden, or absent after SSH, sudo, or nested sessions.
+//! This crate does not verify a live terminal, query escape sequences, detect whether stdout is a
+//! TTY, or infer color and keyboard protocol support. Use `std::io::IsTerminal` for a TTY check.
 //!
-//! let mut env = BTreeMap::new();
-//! env.insert(OsString::from("TERM"), OsString::from("xterm-kitty"));
+//! # Detection logic
 //!
+//! Detection selects one multiplexer and one terminal:
+//!
+//! 1. Nonempty `TMUX`, `ZELLIJ`, then `STY` select a multiplexer in that order. Multiple markers
+//!    cannot reliably establish nesting order; the result does not model a session stack.
+//! 2. A recognized `TERM_PROGRAM` wins over vendor markers. Vendor markers are checked in a fixed
+//!    order, beginning with `WT_SESSION`, WezTerm, Kitty, Alacritty, and Ghostty. Each successful
+//!    environment match records the matching key and value. See [`TerminalKind`] for supported
+//!    hints.
+//! 3. With commands enabled, a recognized tmux client term name takes precedence over the pane's
+//!    `TERM`. Each probe runs once and its full command string identifies any resulting match.
+//! 4. `TERM` is a fallback. Matching uses complete family names followed by `-` or `.`, avoiding
+//!    substring matches such as `stupid` or `not-xterm`. `screen*` identifies Screen emulation only
+//!    when neither tmux nor zellij was selected.
+//!
+//! Empty markers do not identify an application. Unrecognized `TERM_PROGRAM` values are retained
+//! and allow later rules to match. `TERM_PROGRAM_VERSION` becomes [`TerminalInfo::version`] only
+//! when `TERM_PROGRAM` itself identifies the result; otherwise it remains raw metadata in
+//! [`TerminalInfo::term_program_version`]. `SESSIONNAME=Console` does not identify Windows Console
+//! Host, and is not used for detection.
+//!
+//! ```
+//! use detect_terminal::{EnvMap, MultiplexerKind, TerminalKind, detect_from_env};
+//!
+//! let env = EnvMap::from([
+//!     ("TMUX".into(), "/tmp/tmux-1000/default,1234,0".into()),
+//!     ("TERM_PROGRAM".into(), "ghostty".into()),
+//!     ("TERM".into(), "screen-256color".into()),
+//! ]);
 //! let info = detect_from_env(&env);
-//! assert_eq!(info.kind.to_string(), "Kitty");
+//! assert_eq!(info.kind, TerminalKind::Ghostty);
+//! assert_eq!(info.multiplexer.unwrap().kind, MultiplexerKind::Tmux);
+//! assert!(info.command_probes.is_empty());
 //! ```
 //!
-//! # Options
+//! # Optional command probes
 //!
-//! Use [`DetectOptions`] to control command probes and environment capture.
-//! `detect()` and `detect_from_env()` use default options with probes enabled.
+//! Set [`DetectOptions::allow_commands`] to query `tmux -V`, tmux client term name and type,
+//! `screen --version`, or `zellij --version` after a matching mux marker is found. Commands use the
+//! supplied snapshot as their environment and do not invoke a shell. They block without a timeout;
+//! leave them disabled when latency must be bounded. Multiple tmux clients may make the selected
+//! client ambiguous. Missing tools, failed commands, and unrecognized banners leave metadata
+//! absent.
 //!
-//! ```rust
+//! ```no_run
 //! use detect_terminal::{DetectOptions, detect_with_options};
 //!
 //! let env = std::env::vars_os().collect();
 //! let options = DetectOptions {
-//!     allow_commands: false,
-//!     capture_env_subset: false,
+//!     allow_commands: true,
+//!     ..DetectOptions::default()
 //! };
 //! let info = detect_with_options(&env, options);
-//! println!("terminal: {kind}", kind = info.kind);
-//! ```
-//!
-//! # Diagnostics
-//!
-//! Use these fields when you need to explain or debug the result:
-//!
-//! - [`TerminalInfo::identifiers`] includes the env markers that matched.
-//! - [`TerminalInfo::detected_via`] indicates whether env keys or commands triggered detection.
-//! - [`TerminalInfo::raw_env_subset`] records only the env variables read.
-//! - [`TerminalInfo::command_probes`] stores command outputs when probes run.
-//!
-//! ```rust
-//! use detect_terminal::detect;
-//!
-//! let info = detect();
-//! for identifier in &info.identifiers {
-//!     println!(
-//!         "{key}={value}",
-//!         key = identifier.key,
-//!         value = identifier.value
-//!     );
+//! for probe in &info.command_probes {
+//!     println!("{}: {:?}", probe.command, probe.status);
 //! }
 //! ```
 //!
-//! # Edge Cases
+//! # Diagnostics and privacy
 //!
-//! - `TERM=screen*` is treated as GNU Screen only when a tmux marker is not present, avoiding tmux
-//!   misclassification.
-//! - `TERM_PROGRAM` and `TERM` can both be set. Prefer [`TerminalInfo::term_program`] for the
-//!   application name and [`TerminalInfo::term`] for emulation details.
-//!
-//! # Privacy and Performance
-//!
-//! - Avoid logging [`TerminalInfo::command_probes`], [`TerminalInfo::identifiers`], or
-//!   [`TerminalInfo::raw_env_subset`] in telemetry unless you scrub sensitive values.
-//! - Command probes add latency proportional to `tmux`, `screen`, or `zellij` invocation; disable
-//!   them in hot paths if needed.
-//!
-//! # CLI JSON Output
-//!
-//! The `detect-terminal-cli` crate can emit JSON that mirrors [`TerminalInfo`].
-//! This is useful for diagnostics or piping into other tools.
-//!
-//! # Extending Detection
-//!
-//! - Add new terminal markers in `detect.rs` and document them in [`TerminalKind`].
-//! - Add a test case in `detect.rs` with `rstest`.
-//! - Prefer explicit program markers before `TERM` heuristics.
+//! [`TerminalInfo::raw_env_subset`] captures consulted variables by default. Disabling
+//! [`DetectOptions::capture_env_subset`] removes that map, but matched [`Identifier`] values and
+//! raw terminal names still appear in the result. Probe records include failures as well as output
+//! from successful commands. Non-Unicode environment values and output are decoded lossily.
+//! Review these fields before logging: session identifiers, paths, and command errors may contain
+//! private information. Capture is diagnostic evidence, not a complete environment dump.
+
+#![forbid(unsafe_code)]
+#![warn(missing_docs, missing_debug_implementations)]
+
 mod command;
 mod detect;
 mod env;
