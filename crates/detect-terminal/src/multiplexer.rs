@@ -1,38 +1,22 @@
 use std::fmt;
 
-/// Multiplexer kinds detected from environment markers.
+/// A multiplexer inferred from a nonempty session environment marker.
 ///
-/// This is independent of the terminal emulator; it indicates a session is
-/// running under tmux/screen/zellij rather than naming the underlying terminal
-/// app. The detector checks env markers first and optionally runs `tmux -V`,
-/// `tmux display-message -p`, `screen --version`, and `zellij --version` for
-/// richer metadata.
-/// The [`fmt::Display`] implementation returns lowercase names (`tmux`,
-/// `screen`, `zellij`).
-///
-/// Markers:
-/// - `TMUX` for tmux
-/// - `STY` for screen
-/// - `ZELLIJ` for zellij
-///
-/// Multiplexers are identified separately from the terminal so clients can
-/// treat tmux/screen/zellij as distinct from the underlying terminal.
-///
-/// When multiple markers are present, tmux takes precedence over zellij and
-/// screen. Note that `TERM=screen*` does not set the multiplexer kind; GNU
-/// Screen requires the `STY` marker. When adding a multiplexer, update markers
-/// here and add a test case in `detect.rs`.
+/// This identifies the session manager independently of [`TerminalInfo::kind`]. `TERM=screen*`
+/// alone does not establish a Screen session; it may describe emulation used by another
+/// multiplexer. If markers conflict, only one kind is selected; see [Detection
+/// logic](crate#detection-logic). [`fmt::Display`] returns `tmux`, `screen`, or `zellij`.
 ///
 /// # Example
 ///
-/// ```rust
-/// use detect_terminal::detect;
-///
-/// let info = detect();
-/// if let Some(mux) = info.multiplexer.as_ref() {
-///     println!("multiplexer: {kind}", kind = mux.kind);
+/// ```
+/// let info = detect_terminal::detect();
+/// if let Some(mux) = &info.multiplexer {
+///     println!("Multiplexer: {}", mux.kind);
 /// }
 /// ```
+///
+/// [`TerminalInfo::kind`]: crate::TerminalInfo::kind
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum MultiplexerKind {
@@ -54,31 +38,45 @@ impl fmt::Display for MultiplexerKind {
     }
 }
 
-/// Multiplexer metadata gathered from the environment and optional commands.
+/// Multiplexer identity with optional command-derived version and client information.
 ///
-/// This is returned in [`TerminalInfo::multiplexer`] when a multiplexer marker
-/// is present. Fields may be `None` when command probing is disabled, when a
-/// multiplexer binary is not available on `PATH`, or when the multiplexer does
-/// not expose equivalent metadata. For non-tmux multiplexers,
-/// [`MultiplexerInfo::client_term`] and [`MultiplexerInfo::client_type`] are
-/// always `None`.
+/// Returned in [`TerminalInfo::multiplexer`] when a session marker is present. Environment-only
+/// detection populates `kind`; every other field is `None`. Enable
+/// [`DetectOptions::allow_commands`] through [`detect_with_options`] to request the extra metadata.
+/// Missing executables, failed probes, and unavailable values still leave those fields absent.
+/// Inspect [`TerminalInfo::command_probes`] to distinguish failed attempts from disabled probing.
+///
+/// The client fields apply only to tmux. They describe the client selected by tmux, which can be
+/// ambiguous when several clients are attached. Screen and Zellij always leave these fields `None`.
+/// See [Optional command probes](crate#optional-command-probes) for the blocking execution
+/// contract.
 ///
 /// # Example
 ///
-/// ```rust
-/// use detect_terminal::{MultiplexerKind, detect};
+/// Run inside a multiplexer session with its executable on `PATH`. Probes have no timeout.
 ///
-/// let info = detect();
-/// if let Some(mux) = info.multiplexer.as_ref() {
-///     let kind = mux.kind.to_string();
-///     let version = &mux.version;
-///     println!("{kind} version: {version:?}");
+/// ```no_run
+/// use detect_terminal::{DetectOptions, detect_with_options};
+///
+/// let env = std::env::vars_os().collect();
+/// let options = DetectOptions {
+///     allow_commands: true,
+///     ..DetectOptions::default()
+/// };
+/// let info = detect_with_options(&env, options);
+/// if let Some(mux) = &info.multiplexer {
+///     println!("Multiplexer: {}", mux.kind);
+///     match &mux.version {
+///         Some(version) => println!("Version: {version}"),
+///         None => println!("Version unavailable; inspect command_probes for details"),
+///     }
 /// }
 /// ```
 ///
 /// [`TerminalInfo::multiplexer`]: crate::TerminalInfo::multiplexer
-/// [`MultiplexerInfo::client_term`]: crate::MultiplexerInfo::client_term
-/// [`MultiplexerInfo::client_type`]: crate::MultiplexerInfo::client_type
+/// [`TerminalInfo::command_probes`]: crate::TerminalInfo::command_probes
+/// [`DetectOptions::allow_commands`]: crate::DetectOptions::allow_commands
+/// [`detect_with_options`]: crate::detect_with_options
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MultiplexerInfo {
     /// Multiplexer type detected from environment markers.
@@ -88,12 +86,15 @@ pub struct MultiplexerInfo {
     /// This uses `tmux -V`, `screen --version`, or `zellij --version` when
     /// command probing is enabled.
     pub version: Option<String>,
-    /// tmux client term name from `tmux display-message`, when available.
+    /// The tmux client's terminal name, usually a terminfo name such as `xterm-256color`.
     ///
-    /// This is only set for tmux sessions with command probing enabled.
+    /// Read from `#{client_termname}` with command probing enabled. It describes the client side,
+    /// which can differ from the pane's `TERM`. Recognized names can supply a terminal fallback.
     pub client_term: Option<String>,
-    /// tmux client term type from `tmux display-message`, when available.
+    /// Additional terminal identification reported by tmux through `#{client_termtype}`.
     ///
-    /// This is only set for tmux sessions with command probing enabled.
+    /// Retained as an opaque diagnostic string, not a terminfo name or capability list. It does
+    /// not participate in terminal matching. Absent when probing is disabled or tmux cannot supply
+    /// it.
     pub client_type: Option<String>,
 }

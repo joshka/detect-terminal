@@ -36,7 +36,8 @@ valuable here than a generic rule engine.
 Find a documented product marker or a recorded observation before adding a heuristic. An environment
 variable can be inherited by nested applications; describe the uncertainty and add precedence tests
 when it can conflict with existing markers. Keep match evidence consistent with the actual source,
-including command-derived matches. Update the variant reference and user-facing behavior docs with
-the implementation.
+including command-derived matches. Add regression cases in `detect.rs` for new terminal or
+multiplexer markers. Update the variant reference and user-facing behavior docs with the
+implementation.
 
 Use [Testing](testing.md) for evidence and [Rustdoc contracts](rustdoc.md) for API documentation.

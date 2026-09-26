@@ -8,12 +8,18 @@ use std::ffi::OsString;
 /// how the OS represents environment variables, and callers can construct their own detection
 /// inputs. A `BTreeMap` is used so iteration is stable for debugging and tests.
 ///
+/// Lookup is case-sensitive on Unix and ASCII case-insensitive on Windows. A synthetic Windows
+/// snapshot with duplicate spellings prefers an exact match. Diagnostic keys use the detector's
+/// canonical spelling. Values remain OS strings here, but detection results decode them lossily.
+///
 /// # Example
 ///
 /// ```rust
 /// use detect_terminal::EnvMap;
 ///
 /// let env: EnvMap = std::env::vars_os().collect();
+/// let info = detect_terminal::detect_from_env(&env);
+/// println!("Terminal: {}", info.kind);
 /// ```
 ///
 /// [`detect_from_env`]: crate::detect_from_env

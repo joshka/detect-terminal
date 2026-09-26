@@ -16,7 +16,7 @@
 //! }
 //! ```
 //!
-//! # Program identity and terminal emulation
+//! # Interpret the result
 //!
 //! `TERM_PROGRAM` names an application; `TERM` names its terminfo description. Many applications
 //! use `TERM=xterm-256color`, so an [`Xterm`](TerminalKind::Xterm) fallback identifies an emulation
@@ -24,11 +24,70 @@
 //! [`TerminalInfo::detected_via`] explains the chosen match, and raw values remain available even
 //! when [`TerminalInfo::kind`] is [`Unknown`](TerminalKind::Unknown).
 //!
+//! [`TerminalInfo::version`] may be absent even when a terminal is recognized: it is populated
+//! only when a recognized `TERM_PROGRAM` has a `TERM_PROGRAM_VERSION`. The raw version is retained
+//! separately. [`TerminalInfo::multiplexer`] describes tmux, Screen, or Zellij independently of the
+//! terminal; a recognized multiplexer can coexist with an unknown terminal.
+//!
+//! For an unfamiliar result, start with the selected kind and its evidence:
+//!
+//! ```
+//! let info = detect_terminal::detect();
+//! println!("Terminal: {}", info.kind);
+//! for source in &info.detected_via {
+//!     println!("Evidence: {source}");
+//! }
+//! if info.kind == detect_terminal::TerminalKind::Unknown {
+//!     println!(
+//!         "Unrecognized hints: {:?}, {:?}",
+//!         info.term_program, info.term
+//!     );
+//! }
+//! ```
+//!
 //! Environment hints may be inherited, overridden, or absent after SSH, sudo, or nested sessions.
 //! This crate does not verify a live terminal, query escape sequences, detect whether stdout is a
 //! TTY, or infer color and keyboard protocol support. Use `std::io::IsTerminal` for a TTY check.
 //!
+//! # Choose an entry point
+//!
+//! | Input and purpose | Function |
+//! | --- | --- |
+//! | Inspect the current process environment | [`detect()`] |
+//! | Reuse or construct an environment snapshot | [`detect_from_env`] |
+//! | Enable probes or disable diagnostic capture | [`detect_with_options`] |
+//!
+//! All three return a result even if no terminal is recognized. [`EnvMap`] shows how to collect
+//! a snapshot; [`DetectOptions`] documents the defaults and available overrides.
+//!
+//! # Optional command probes
+//!
+//! Set [`DetectOptions::allow_commands`] to query `tmux -V`, tmux client term name and type,
+//! `screen --version`, or `zellij --version` after a matching mux marker is found. Commands use the
+//! supplied snapshot as their environment and do not invoke a shell. They block without a timeout;
+//! leave them disabled when latency must be bounded. Multiple tmux clients may make the selected
+//! client ambiguous. Missing tools, failed commands, and unrecognized banners leave metadata
+//! absent.
+//!
+//! This example requires a matching multiplexer environment and its executable on `PATH`.
+//!
+//! ```no_run
+//! use detect_terminal::{DetectOptions, detect_with_options};
+//!
+//! let env = std::env::vars_os().collect();
+//! let options = DetectOptions {
+//!     allow_commands: true,
+//!     ..DetectOptions::default()
+//! };
+//! let info = detect_with_options(&env, options);
+//! for probe in &info.command_probes {
+//!     println!("{}: {:?}", probe.command, probe.status);
+//! }
+//! ```
+//!
 //! # Detection logic
+//!
+//! When a result is surprising, compare its evidence with this precedence order.
 //!
 //! Detection selects one multiplexer and one terminal:
 //!
@@ -50,6 +109,9 @@
 //! [`TerminalInfo::term_program_version`]. `SESSIONNAME=Console` does not identify Windows Console
 //! Host, and is not used for detection.
 //!
+//! This controlled snapshot demonstrates why a program marker wins over a multiplexer
+//! emulation name. It does not describe the environment of every tmux session.
+//!
 //! ```
 //! use detect_terminal::{EnvMap, MultiplexerKind, TerminalKind, detect_from_env};
 //!
@@ -62,29 +124,6 @@
 //! assert_eq!(info.kind, TerminalKind::Ghostty);
 //! assert_eq!(info.multiplexer.unwrap().kind, MultiplexerKind::Tmux);
 //! assert!(info.command_probes.is_empty());
-//! ```
-//!
-//! # Optional command probes
-//!
-//! Set [`DetectOptions::allow_commands`] to query `tmux -V`, tmux client term name and type,
-//! `screen --version`, or `zellij --version` after a matching mux marker is found. Commands use the
-//! supplied snapshot as their environment and do not invoke a shell. They block without a timeout;
-//! leave them disabled when latency must be bounded. Multiple tmux clients may make the selected
-//! client ambiguous. Missing tools, failed commands, and unrecognized banners leave metadata
-//! absent.
-//!
-//! ```no_run
-//! use detect_terminal::{DetectOptions, detect_with_options};
-//!
-//! let env = std::env::vars_os().collect();
-//! let options = DetectOptions {
-//!     allow_commands: true,
-//!     ..DetectOptions::default()
-//! };
-//! let info = detect_with_options(&env, options);
-//! for probe in &info.command_probes {
-//!     println!("{}: {:?}", probe.command, probe.status);
-//! }
 //! ```
 //!
 //! # Diagnostics and privacy

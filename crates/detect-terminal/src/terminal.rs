@@ -3,39 +3,28 @@ use std::fmt;
 
 use crate::multiplexer::MultiplexerInfo;
 
-/// Known terminal emulators detected from environment markers.
+/// A terminal application or emulation family inferred from available hints.
 ///
-/// This enum is populated by [`detect`], [`detect_from_env`], and
-/// [`detect_with_options`] based on environment markers and optional mux
-/// commands. Marker lists include program identity (`TERM_PROGRAM`) and
-/// emulation identity (`TERM`) where applicable; both may be available in
-/// [`TerminalInfo`] even when a specific `TerminalKind` is not identified.
-/// Detection prefers explicit program markers before falling back to `TERM`
-/// heuristics.
-/// The [`fmt::Display`] implementation returns the user-facing product name.
-/// If the kind is [`TerminalKind::Unknown`], consult
-/// [`TerminalInfo::term_program`] and [`TerminalInfo::term`] for raw hints.
+/// A variant does not always identify the application hosting the session. For example, `Xterm`
+/// can mean only that `TERM` names an xterm-compatible emulation. Inspect
+/// [`TerminalInfo::detected_via`] to distinguish a program marker from a terminfo fallback.
+/// See [Detection logic](crate#detection-logic) for precedence and each variant for its markers.
 ///
-/// When adding a new terminal, document its markers here and add a test case in
-/// `detect.rs`.
+/// [`Unknown`](Self::Unknown) means no supported hint matched; raw values remain in
+/// [`TerminalInfo`]. [`fmt::Display`] returns a user-facing name, not a capability guarantee.
+/// The enum is non-exhaustive, so matches need a fallback for other and future variants.
 ///
 /// # Example
 ///
-/// ```rust
+/// ```
 /// use detect_terminal::{TerminalKind, detect};
 ///
-/// let info = detect();
-/// if info.kind == TerminalKind::Unknown {
-///     println!("terminal not identified");
+/// match detect().kind {
+///     TerminalKind::Ghostty => println!("Ghostty hint found"),
+///     TerminalKind::Unknown => println!("No recognized terminal hint"),
+///     other => println!("Other application or emulation: {other}"),
 /// }
 /// ```
-///
-/// [`detect`]: crate::detect()
-/// [`detect_from_env`]: crate::detect_from_env
-/// [`detect_with_options`]: crate::detect_with_options
-/// [`DetectOptions::capture_env_subset`]: crate::DetectOptions::capture_env_subset
-/// [`DetectOptions::allow_commands`]: crate::DetectOptions::allow_commands
-/// [`TerminalInfo`]: crate::TerminalInfo
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TerminalKind {
@@ -229,10 +218,44 @@ pub struct CommandProbe {
 
 /// Terminal identity, multiplexer metadata, and the evidence used to select them.
 ///
-/// Returned by [`detect`](crate::detect()), [`detect_from_env`](crate::detect_from_env), and
-/// [`detect_with_options`](crate::detect_with_options). Raw environment values are retained even
-/// when no kind is recognized. A known multiplexer does not imply a known terminal application.
-/// See [Detection logic](crate#detection-logic) for how conflicting hints are resolved.
+/// Obtain this result with [`detect`](crate::detect()),
+/// [`detect_from_env`](crate::detect_from_env),
+/// or [`detect_with_options`](crate::detect_with_options). An unknown terminal is a valid result,
+/// and a known multiplexer does not imply a known terminal application.
+///
+/// # Reading the result
+///
+/// Start with [`kind`](Self::kind), [`version`](Self::version), and
+/// [`multiplexer`](Self::multiplexer). A kind can identify an emulation family rather than an
+/// application, and version metadata may be absent even for a known kind.
+///
+/// For unexpected or unknown results, inspect [`detected_via`](Self::detected_via) and
+/// [`identifiers`](Self::identifiers). The raw `term_program`, `term_program_version`, and `term`
+/// fields preserve the input hints even when they do not identify the selected kind. `raw_name`
+/// is a convenience fallback label, not the detected application's name.
+///
+/// [`raw_env_subset`](Self::raw_env_subset) contains consulted variables when capture is enabled;
+/// [`command_probes`](Self::command_probes) contains attempted commands when probing is enabled.
+/// These diagnostics can contain private values. See [Diagnostics and
+/// privacy](crate#diagnostics-and-privacy) and [Detection logic](crate#detection-logic).
+///
+/// # Example
+///
+/// ```
+/// let info = detect_terminal::detect();
+/// println!("Terminal: {}", info.kind);
+/// if let Some(version) = &info.version {
+///     println!("Version: {version}");
+/// }
+/// for source in &info.detected_via {
+///     println!("Selected using: {source}");
+/// }
+/// // Debug formatting escapes control characters in raw environment values.
+/// println!(
+///     "Program hint: {:?}; emulation hint: {:?}",
+///     info.term_program, info.term
+/// );
+/// ```
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TerminalInfo {

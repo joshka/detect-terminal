@@ -14,6 +14,9 @@ Rust 1.88 or newer.
 
 ## Library
 
+After the first release, add the library with `cargo add detect-terminal`. While working from this
+checkout, use a path dependency on `crates/detect-terminal`.
+
 ```rust
 let info = detect_terminal::detect();
 println!("Terminal: {}", info.kind);
@@ -31,9 +34,6 @@ no timeout. Unknown values remain available in the result.
 See the [crate documentation](https://docs.rs/detect-terminal) for detection precedence, command
 behavior, privacy considerations, and supported markers. Build it locally with `just docs`.
 
-After the first release, add the library with `cargo add detect-terminal`. While working from this
-checkout, use a path dependency on `crates/detect-terminal`.
-
 ## CLI
 
 From this checkout:
@@ -47,7 +47,9 @@ The installed binary is `detect-terminal`; install it from the checkout with
 
 The CLI prints human-readable output by default. Run with `--help` for command and diagnostic
 options. Environment and probe details can contain session identifiers or paths; review output
-before sharing it.
+before sharing it. See the
+[CLI guide](https://github.com/joshka/detect-terminal/blob/main/crates/detect-terminal-cli/README.md)
+for installation, output formats, and exit statuses.
 
 ## Development
 

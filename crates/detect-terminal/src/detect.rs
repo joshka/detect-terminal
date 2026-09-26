@@ -45,7 +45,11 @@ pub fn detect_from_env(env: &EnvMap) -> TerminalInfo {
 /// probing. Commands are synchronous and have no timeout. Failed probes leave optional metadata
 /// absent and are recorded in [`TerminalInfo::command_probes`].
 ///
-/// # Example
+/// # Disable diagnostic capture
+///
+/// Keep environment-only detection while omitting the diagnostic map. Other result fields still
+/// retain matching identifiers and raw hints. For enabling external commands, see
+/// [Optional command probes](crate#optional-command-probes).
 ///
 /// ```
 /// use detect_terminal::{DetectOptions, detect_with_options};
