@@ -36,7 +36,7 @@ remaining risk warrants it; repeatedly running a passing suite is not additional
 
 ## Platform Limits
 
-CI is configured for native Linux, macOS, and Windows tests, with a separate Rust 1.97 job on Linux.
+CI is configured for native Linux, macOS, and Windows tests, with a separate Rust 1.88 job on Linux.
 A successful local macOS run does not establish the other platforms. Record which jobs actually ran.
 Environment fixtures establish the detector's rules; they do not establish how every terminal
 version configures its environment. Live tmux, screen, and zellij sessions remain useful manual

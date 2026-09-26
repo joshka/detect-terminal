@@ -22,7 +22,7 @@ platform results and registry access are separate gates before publishing.
 | Release is reviewable                | Every `jj` change has a purpose, there are no conflicts or unintended files, and release notes describe shipped behavior |
 | Publication is possible              | Repository exists, crate names and owner access are confirmed, and publish dry-run succeeds                              |
 
-The current MSRV is Rust 1.97. The policy allows moving to the previous stable release when a real
+The current MSRV is Rust 1.88. The policy allows moving to the previous stable release when a real
 implementation or dependency requirement arises. It does not require a bump for every release.
 
 ## Local Validation
@@ -63,7 +63,7 @@ release automatically.
 
 ## Current Candidate Evidence
 
-As of 2026-09-26, local macOS validation passed on stable Rust and Rust 1.97: 73 library tests, one
+As of 2026-09-26, local macOS validation passed on stable Rust and Rust 1.88: 73 library tests, one
 CLI unit test, six CLI integration tests, and 11 doctests. Strict Clippy, public and private
 Rustdoc, formatting checks, workflow syntax validation, the dependency advisory audit, archive
 verification, and the workspace publish dry-run also passed. The archives contain the license texts

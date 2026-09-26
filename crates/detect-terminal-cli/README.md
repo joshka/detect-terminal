@@ -1,7 +1,7 @@
 # detect-terminal CLI
 
 Inspect terminal and multiplexer hints using the `detect-terminal` command. The default output is
-human-readable; JSON is available for scripts. Rust 1.97 or newer is required to build it.
+human-readable; JSON is available for scripts. Rust 1.88 or newer is required to build it.
 
 ## Installation
 

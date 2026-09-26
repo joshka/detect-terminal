@@ -6,15 +6,16 @@ separate when proposing a change.
 
 ## Setup
 
-Rust 1.97 is the minimum supported version. It was the previous stable release when this baseline
-was chosen. Raise the MSRV only when a language feature or dependency needs it, targeting the
-previous stable release at that time; do not advance it automatically for every crate release. Use
-stable Rust for development and nightly rustfmt for the unstable options in `rustfmt.toml`.
+Rust 1.88 is the minimum supported version, verified with cargo-msrv and the workspace test suite.
+The detection code uses let-chains, which require this version. Raise the MSRV only when a language
+feature or dependency needs it, targeting the previous stable release at that time; do not advance
+it automatically for every crate release. Use stable Rust for development and nightly rustfmt for
+the unstable options in `rustfmt.toml`.
 
 ```sh
 rustup toolchain install stable --component clippy
 rustup toolchain install nightly --component rustfmt
-rustup toolchain install 1.97.0
+rustup toolchain install 1.88.0
 cargo install just --version 1.58.0 --locked
 cargo install rumdl --version 0.2.77 --locked
 ```

@@ -45,7 +45,7 @@ docs-private:
 
 # Run all tests on the minimum supported compiler.
 msrv:
-    cargo +1.97.0 test --workspace --all-features --locked
+    cargo +1.88.0 test --workspace --all-features --locked
 
 # Assemble and compile both release archives from a clean checkout.
 package:
