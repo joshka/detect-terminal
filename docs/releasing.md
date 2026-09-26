@@ -95,5 +95,5 @@ release.
 If authentication fails, compare the workflow filename and environment with each crate's trusted
 publisher configuration, and check the environment's branch restriction. Renaming any of these
 requires updating the corresponding configuration. Refer to the
-[trusted publishing setup](https://release-plz.dev/docs/github/quickstart#2-set-up-trusted-publishing)
+[trusted publishing setup](https://release-plz.dev/docs/github/quickstart)
 when changing the release workflow.
