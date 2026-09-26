@@ -1,7 +1,8 @@
+use std::collections::BTreeMap;
+
 use clap::{Parser, ValueEnum};
 use detect_terminal::{DetectOptions, MultiplexerInfo};
 use serde_json::{Value, json};
-use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, ValueEnum)]
 enum OutputFormat {

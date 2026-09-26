@@ -14,7 +14,7 @@
 //!
 //! ```rust
 //! use detect_terminal::{
-//!     detect, detect_from_env, detect_with_options, DetectOptions, TerminalKind,
+//!     DetectOptions, TerminalKind, detect, detect_from_env, detect_with_options,
 //! };
 //!
 //! let info = detect();
@@ -70,12 +70,11 @@
 //!
 //! The detector runs in two phases:
 //!
-//! - Multiplexer detection first: looks for `TMUX`, `ZELLIJ`, or `STY`. When
-//!   command probing is enabled, it shells out to gather version metadata and
-//!   tmux client term details.
+//! - Multiplexer detection first: looks for `TMUX`, `ZELLIJ`, or `STY`. When command probing is
+//!   enabled, it shells out to gather version metadata and tmux client term details.
 //! - Terminal detection second: prefers explicit program markers (for example,
-//!   `TERM_PROGRAM=WezTerm`, `WT_SESSION`) before falling back to `TERM`
-//!   heuristics (for example, `TERM=xterm-ghostty`).
+//!   `TERM_PROGRAM=WezTerm`, `WT_SESSION`) before falling back to `TERM` heuristics (for example,
+//!   `TERM=xterm-ghostty`).
 //!
 //! The multiplexer result is stored separately in [`TerminalInfo::multiplexer`]
 //! and does not override the terminal emulator. When command probing is
@@ -94,9 +93,10 @@
 //! separately.
 //!
 //! ```rust
-//! use detect_terminal::detect_from_env;
 //! use std::collections::BTreeMap;
 //! use std::ffi::OsString;
+//!
+//! use detect_terminal::detect_from_env;
 //!
 //! let mut env = BTreeMap::new();
 //! let tmux_path = "/tmp/tmux-1000/default,1234,0";
@@ -113,9 +113,10 @@
 //! Example: no program markers. The detector falls back to `TERM` heuristics.
 //!
 //! ```rust
-//! use detect_terminal::detect_from_env;
 //! use std::collections::BTreeMap;
 //! use std::ffi::OsString;
+//!
+//! use detect_terminal::detect_from_env;
 //!
 //! let mut env = BTreeMap::new();
 //! env.insert(OsString::from("TERM"), OsString::from("xterm-kitty"));
@@ -130,7 +131,7 @@
 //! `detect()` and `detect_from_env()` use default options with probes enabled.
 //!
 //! ```rust
-//! use detect_terminal::{detect_with_options, DetectOptions};
+//! use detect_terminal::{DetectOptions, detect_with_options};
 //!
 //! let env = std::env::vars_os().collect();
 //! let options = DetectOptions {
@@ -146,8 +147,7 @@
 //! Use these fields when you need to explain or debug the result:
 //!
 //! - [`TerminalInfo::identifiers`] includes the env markers that matched.
-//! - [`TerminalInfo::detected_via`] indicates whether env keys or commands
-//!   triggered detection.
+//! - [`TerminalInfo::detected_via`] indicates whether env keys or commands triggered detection.
 //! - [`TerminalInfo::raw_env_subset`] records only the env variables read.
 //! - [`TerminalInfo::command_probes`] stores command outputs when probes run.
 //!
@@ -156,25 +156,27 @@
 //!
 //! let info = detect();
 //! for identifier in &info.identifiers {
-//!     println!("{key}={value}", key = identifier.key, value = identifier.value);
+//!     println!(
+//!         "{key}={value}",
+//!         key = identifier.key,
+//!         value = identifier.value
+//!     );
 //! }
 //! ```
 //!
 //! # Edge Cases
 //!
-//! - `TERM=screen*` is treated as GNU Screen only when a tmux marker is not
-//!   present, avoiding tmux misclassification.
-//! - `TERM_PROGRAM` and `TERM` can both be set. Prefer
-//!   [`TerminalInfo::term_program`] for the application name and
-//!   [`TerminalInfo::term`] for emulation details.
+//! - `TERM=screen*` is treated as GNU Screen only when a tmux marker is not present, avoiding tmux
+//!   misclassification.
+//! - `TERM_PROGRAM` and `TERM` can both be set. Prefer [`TerminalInfo::term_program`] for the
+//!   application name and [`TerminalInfo::term`] for emulation details.
 //!
 //! # Privacy and Performance
 //!
-//! - Avoid logging [`TerminalInfo::command_probes`],
-//!   [`TerminalInfo::identifiers`], or [`TerminalInfo::raw_env_subset`] in
-//!   telemetry unless you scrub sensitive values.
-//! - Command probes add latency proportional to `tmux`, `screen`, or `zellij`
-//!   invocation; disable them in hot paths if needed.
+//! - Avoid logging [`TerminalInfo::command_probes`], [`TerminalInfo::identifiers`], or
+//!   [`TerminalInfo::raw_env_subset`] in telemetry unless you scrub sensitive values.
+//! - Command probes add latency proportional to `tmux`, `screen`, or `zellij` invocation; disable
+//!   them in hot paths if needed.
 //!
 //! # CLI JSON Output
 //!
@@ -183,8 +185,7 @@
 //!
 //! # Extending Detection
 //!
-//! - Add new terminal markers in `detect.rs` and document them in
-//!   [`TerminalKind`].
+//! - Add new terminal markers in `detect.rs` and document them in [`TerminalKind`].
 //! - Add a test case in `detect.rs` with `rstest`.
 //! - Prefer explicit program markers before `TERM` heuristics.
 mod command;

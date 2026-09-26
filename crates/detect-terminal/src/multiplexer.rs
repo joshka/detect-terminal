@@ -62,7 +62,7 @@ impl fmt::Display for MultiplexerKind {
 /// # Example
 ///
 /// ```rust
-/// use detect_terminal::{detect, MultiplexerKind};
+/// use detect_terminal::{MultiplexerKind, detect};
 ///
 /// let info = detect();
 /// if let Some(mux) = info.multiplexer.as_ref() {

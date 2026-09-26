@@ -46,9 +46,10 @@ pub fn detect() -> TerminalInfo {
 /// # Example
 ///
 /// ```rust
-/// use detect_terminal::detect_from_env;
-/// use std::ffi::OsString;
 /// use std::collections::BTreeMap;
+/// use std::ffi::OsString;
+///
+/// use detect_terminal::detect_from_env;
 ///
 /// let mut env = BTreeMap::new();
 /// env.insert(OsString::from("TERM_PROGRAM"), OsString::from("iTerm.app"));
@@ -73,7 +74,7 @@ pub fn detect_from_env(env: &EnvMap) -> TerminalInfo {
 /// # Example
 ///
 /// ```rust
-/// use detect_terminal::{detect_with_options, DetectOptions};
+/// use detect_terminal::{DetectOptions, detect_with_options};
 ///
 /// let env = std::env::vars_os().collect();
 /// let options = DetectOptions {
@@ -541,12 +542,14 @@ fn parse_screen_version(output: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::command::CommandOutput;
-    use pretty_assertions::assert_eq;
-    use rstest::rstest;
     use std::collections::BTreeMap;
     use std::ffi::OsString;
+
+    use pretty_assertions::assert_eq;
+    use rstest::rstest;
+
+    use super::*;
+    use crate::command::CommandOutput;
 
     struct TestCommandRunner {
         outputs: BTreeMap<String, CommandOutput>,

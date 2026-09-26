@@ -11,7 +11,7 @@
 /// # Example
 ///
 /// ```rust
-/// use detect_terminal::{detect_with_options, DetectOptions};
+/// use detect_terminal::{DetectOptions, detect_with_options};
 ///
 /// let env = std::env::vars_os().collect();
 /// let options = DetectOptions {

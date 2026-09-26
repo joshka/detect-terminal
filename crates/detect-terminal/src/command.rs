@@ -1,5 +1,6 @@
-use crate::CommandProbe;
 use std::process::Command;
+
+use crate::CommandProbe;
 
 /// Runner abstraction for executing command probes.
 ///
@@ -15,7 +16,6 @@ pub(crate) trait CommandRunner {
 /// [`DetectOptions::allow_commands`]: crate::DetectOptions::allow_commands
 /// [`TerminalInfo::command_probes`]: crate::TerminalInfo::command_probes
 /// [`detect_with_options`]: crate::detect_with_options
-
 /// Specification for a command probe invocation.
 ///
 /// Commands are recorded in [`CommandProbe::command`] using

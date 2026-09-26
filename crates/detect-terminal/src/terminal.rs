@@ -1,6 +1,7 @@
-use crate::multiplexer::MultiplexerInfo;
 use std::collections::BTreeMap;
 use std::fmt;
+
+use crate::multiplexer::MultiplexerInfo;
 
 /// Known terminal emulators detected from environment markers.
 ///
@@ -226,7 +227,7 @@ pub struct Identifier {
 /// # Example
 ///
 /// ```rust
-/// use detect_terminal::{detect, DetectionSource};
+/// use detect_terminal::{DetectionSource, detect};
 ///
 /// let info = detect();
 /// if info
