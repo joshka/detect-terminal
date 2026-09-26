@@ -81,3 +81,31 @@ fn help_explains_command_side_effects() {
     assert!(help.contains("no timeout"));
     assert!(help.contains("matched identifiers remain visible"));
 }
+
+#[test]
+fn human_output_escapes_environment_controls_but_json_preserves_values() {
+    let raw = "custom\nterminal: FORGED\r\t\u{1b}[31m café";
+    for args in [&[][..], &["--json"][..]] {
+        let output = Command::new(env!("CARGO_BIN_EXE_detect-terminal"))
+            .args(args)
+            .env_clear()
+            .env("TERM_PROGRAM", raw)
+            .env("TERM_PROGRAM_VERSION", raw)
+            .env("TERM", raw)
+            .env("KITTY_WINDOW_ID", raw)
+            .output()
+            .unwrap();
+        assert!(output.status.success());
+        if args.is_empty() {
+            let text = String::from_utf8(output.stdout).unwrap();
+            assert!(!text.contains("\nterminal: FORGED"));
+            assert!(!text.chars().any(|c| c.is_control() && c != '\n'));
+            assert!(text.contains(&raw.escape_debug().to_string()));
+            assert!(text.contains("café"));
+        } else {
+            let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+            assert_eq!(value["term_program"], raw);
+            assert_eq!(value["identifiers"][0]["value"], raw);
+        }
+    }
+}

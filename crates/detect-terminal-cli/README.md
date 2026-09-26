@@ -15,6 +15,9 @@ From a checkout, use `cargo install --path crates/detect-terminal-cli --locked`.
 
 ## Usage
 
+Human-readable reports escape control characters and backslashes in values so diagnostics cannot
+insert report lines or terminal escape sequences. JSON preserves the original decoded values.
+
 ```sh
 detect-terminal
 detect-terminal --json

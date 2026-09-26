@@ -81,30 +81,38 @@ fn main() -> ExitCode {
 fn print_human(writer: &mut impl Write, info: &detect_terminal::TerminalInfo) -> io::Result<()> {
     writeln!(writer, "terminal: {}", info.kind)?;
     if let Some(version) = &info.version {
+        let version = version.escape_debug();
         writeln!(writer, "version: {version}")?;
     }
     if let Some(raw) = &info.raw_name {
+        let raw = raw.escape_debug();
         writeln!(writer, "raw name: {raw}")?;
     }
     if let Some(term_program) = &info.term_program {
+        let term_program = term_program.escape_debug();
         writeln!(writer, "term program: {term_program}")?;
     }
     if let Some(term_program_version) = &info.term_program_version {
+        let term_program_version = term_program_version.escape_debug();
         writeln!(writer, "term program version: {term_program_version}")?;
     }
     if let Some(term) = &info.term {
+        let term = term.escape_debug();
         writeln!(writer, "term: {term}")?;
     }
 
     if let Some(mux) = &info.multiplexer {
         writeln!(writer, "multiplexer: {}", mux.kind)?;
         if let Some(version) = &mux.version {
+            let version = version.escape_debug();
             writeln!(writer, "mux version: {version}")?;
         }
         if let Some(client_term) = &mux.client_term {
+            let client_term = client_term.escape_debug();
             writeln!(writer, "tmux client term: {client_term}")?;
         }
         if let Some(client_type) = &mux.client_type {
+            let client_type = client_type.escape_debug();
             writeln!(writer, "tmux client type: {client_type}")?;
         }
     }
@@ -112,6 +120,8 @@ fn print_human(writer: &mut impl Write, info: &detect_terminal::TerminalInfo) ->
     if !info.detected_via.is_empty() {
         writeln!(writer, "detected via:")?;
         for source in &info.detected_via {
+            let source = source.to_string();
+            let source = source.escape_debug();
             writeln!(writer, "- {source}")?;
         }
     }
@@ -119,13 +129,20 @@ fn print_human(writer: &mut impl Write, info: &detect_terminal::TerminalInfo) ->
     if !info.identifiers.is_empty() {
         writeln!(writer, "identifiers:")?;
         for identifier in &info.identifiers {
-            writeln!(writer, "- {}={}", identifier.key, identifier.value)?;
+            writeln!(
+                writer,
+                "- {}={}",
+                identifier.key.escape_debug(),
+                identifier.value.escape_debug()
+            )?;
         }
     }
 
     if !info.raw_env_subset.is_empty() {
         writeln!(writer, "env subset:")?;
         for (key, value) in &info.raw_env_subset {
+            let key = key.escape_debug();
+            let value = value.escape_debug();
             writeln!(writer, "- {key}={value}")?;
         }
     }
@@ -137,15 +154,21 @@ fn print_human(writer: &mut impl Write, info: &detect_terminal::TerminalInfo) ->
                 .status
                 .map(|code| code.to_string())
                 .unwrap_or_else(|| "unknown".to_string());
-            writeln!(writer, "- {} (status: {})", probe.command, status)?;
+            writeln!(
+                writer,
+                "- {} (status: {})",
+                probe.command.escape_debug(),
+                status
+            )?;
             if !probe.stdout.is_empty() {
-                writeln!(writer, "  stdout: {}", probe.stdout)?;
+                writeln!(writer, "  stdout: {}", probe.stdout.escape_debug())?;
             }
             if let Some(error) = &probe.error {
+                let error = error.escape_debug();
                 writeln!(writer, "  error: {error}")?;
             }
             if !probe.stderr.is_empty() {
-                writeln!(writer, "  stderr: {}", probe.stderr)?;
+                writeln!(writer, "  stderr: {}", probe.stderr.escape_debug())?;
             }
         }
     }
