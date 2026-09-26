@@ -75,6 +75,6 @@ syntax. CI runs zizmor with its pedantic rules and a read-only GitHub token for 
 runs can use `GH_TOKEN` for the same online coverage; offline-only checks do not establish that
 coverage.
 
-Keep fixes and maintenance in reviewable `jj` changes. Describe the problem and resulting behavior
-with an imperative summary. Include validation and limitations when requesting review. The project
-is licensed under MIT OR Apache-2.0; contributions must be compatible with that choice.
+Keep fixes and maintenance in reviewable changes. Describe the problem and resulting behavior with
+an imperative summary. Include validation and limitations when requesting review. The project is
+licensed under MIT OR Apache-2.0; contributions must be compatible with that choice.

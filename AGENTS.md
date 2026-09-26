@@ -36,7 +36,7 @@ point. Record a rule's reason, not the conversation that introduced it.
 - Run `cargo check -p detect-terminal` after a structural refactor to keep changes buildable.
 - Use the focused recipes in `just --list` while iterating; run release gates as documented.
 - Keep warnings actionable and fix their causes. Do not add broad lint suppressions.
-- Use small, coherent `jj` changes with imperative summaries; preserve unrelated local work.
+- Use small, coherent changes with imperative summaries; preserve unrelated local work.
 - Keep behavior changes, structural refactors, and dependency maintenance independently reviewable
   when they can be validated independently.
 - Explain the user-visible result, relevant evidence, and remaining limitations when handing off.

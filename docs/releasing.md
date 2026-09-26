@@ -5,22 +5,22 @@ platform results and registry access are separate gates before publishing.
 
 ## Acceptance Criteria
 
-| Criterion                            | Required evidence                                                                                                        |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| Detection is predictable             | Tests cover recognized hints, precedence, empty/unknown values, and near-miss `TERM` names                               |
-| Evidence is truthful                 | Matching identifiers and sources name the actual environment key or successful command                                   |
-| Defaults have bounded work           | Default detection reads only the environment; blocking commands require explicit opt-in                                  |
-| Probe failures degrade clearly       | Missing tools, nonzero exits, and malformed output leave metadata absent and retain diagnostics                          |
-| Public contracts are clear           | Defaults, encoding, partial results, capture limits, and emulation uncertainty are documented                            |
-| CLI is usable in scripts             | Argument, JSON, human output, and broken-pipe tests pass; JSON schema version is documented                              |
-| Workspace checks pass                | `just check` passes with warning-free public/private Rustdoc and strict Clippy                                           |
-| Supported compiler works             | `just msrv` passes on the declared MSRV; CI also checks it with Clippy                                                   |
-| Supported hosts work                 | Native Linux, macOS, and Windows CI tests pass for the exact release revision                                            |
-| Dependency maintenance is controlled | Lockfile updates pass checks; advisories are reviewed; manifest requirement changes are deliberate                       |
-| Archives are self-contained          | `just package` verifies both crates; extracted archives contain README, license texts, source, and correct metadata      |
-| Published metadata is accurate       | License, repository, descriptions, versions, MSRV, and the CLI's library requirement match the release                   |
-| Release is reviewable                | Every `jj` change has a purpose, there are no conflicts or unintended files, and release notes describe shipped behavior |
-| Publication is possible              | Repository exists, crate names and owner access are confirmed, and publish dry-run succeeds                              |
+| Criterion                            | Required evidence                                                                                                   |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| Detection is predictable             | Tests cover recognized hints, precedence, empty/unknown values, and near-miss `TERM` names                          |
+| Evidence is truthful                 | Matching identifiers and sources name the actual environment key or successful command                              |
+| Defaults have bounded work           | Default detection reads only the environment; blocking commands require explicit opt-in                             |
+| Probe failures degrade clearly       | Missing tools, nonzero exits, and malformed output leave metadata absent and retain diagnostics                     |
+| Public contracts are clear           | Defaults, encoding, partial results, capture limits, and emulation uncertainty are documented                       |
+| CLI is usable in scripts             | Argument, JSON, human output, and broken-pipe tests pass; JSON schema version is documented                         |
+| Workspace checks pass                | `just check` passes with warning-free public/private Rustdoc and strict Clippy                                      |
+| Supported compiler works             | `just msrv` passes on the declared MSRV; CI also checks it with Clippy                                              |
+| Supported hosts work                 | Native Linux, macOS, and Windows CI tests pass for the exact release revision                                       |
+| Dependency maintenance is controlled | Lockfile updates pass checks; advisories are reviewed; manifest requirement changes are deliberate                  |
+| Archives are self-contained          | `just package` verifies both crates; extracted archives contain README, license texts, source, and correct metadata |
+| Published metadata is accurate       | License, repository, descriptions, versions, MSRV, and the CLI's library requirement match the release              |
+| Release is reviewable                | Every change has a purpose, there are no conflicts or unintended files, and release notes describe shipped behavior |
+| Publication is possible              | Repository exists, crate names and owner access are confirmed, and publish dry-run succeeds                         |
 
 The current MSRV is Rust 1.88. The policy allows moving to the previous stable release when a real
 implementation or dependency requirement arises. It does not require a bump for every release.
@@ -49,7 +49,7 @@ registry version of `detect-terminal` rather than a checkout-only path.
 
 ## Publication
 
-1. Review the `jj` stack and update the Unreleased notes with the version and release date.
+1. Review the commits and update the Unreleased notes with the version and release date.
 1. Confirm the GitHub repository and remote, publish the reviewed revision, and wait for all CI
    jobs.
 1. Recheck crate-name availability and publishing permissions. A name being available earlier is not
