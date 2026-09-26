@@ -85,6 +85,10 @@ pub enum TerminalKind {
     ///
     /// Markers: `TERM_PROGRAM=mintty`.
     Mintty,
+    /// Rio terminal emulator. <https://rioterm.com>
+    ///
+    /// Markers: `TERM_PROGRAM=rio`, `TERM=rio`.
+    Rio,
     /// rxvt-unicode terminal emulator. <https://software.schmorp.de/pkg/rxvt-unicode.html>
     ///
     /// Markers: `RXVT_SOCKET`, `RXVT_TERM`, `TERM=rxvt`.
@@ -149,6 +153,7 @@ impl fmt::Display for TerminalKind {
             TerminalKind::Kitty => "Kitty",
             TerminalKind::Konsole => "Konsole",
             TerminalKind::Mintty => "mintty",
+            TerminalKind::Rio => "Rio",
             TerminalKind::Rxvt => "rxvt-unicode",
             TerminalKind::Screen => "GNU Screen",
             TerminalKind::St => "st",

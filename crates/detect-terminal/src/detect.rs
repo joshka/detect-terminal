@@ -191,6 +191,7 @@ fn program_kind(program: &str) -> Option<TerminalKind> {
         "hyper" => TerminalKind::Hyper,
         "warpterminal" => TerminalKind::Warp,
         "ghostty" => TerminalKind::Ghostty,
+        "rio" => TerminalKind::Rio,
         "mintty" => TerminalKind::Mintty,
         "windows_terminal" => TerminalKind::WindowsTerminal,
         _ => return None,
@@ -207,6 +208,7 @@ fn term_kind(term: &str) -> Option<TerminalKind> {
         ("alacritty", TerminalKind::Alacritty),
         ("foot", TerminalKind::Foot),
         ("st", TerminalKind::St),
+        ("rio", TerminalKind::Rio),
         ("rxvt", TerminalKind::Rxvt),
         ("screen", TerminalKind::Screen),
         ("xterm", TerminalKind::Xterm),
@@ -259,6 +261,8 @@ mod tests {
     #[case("Hyper", TerminalKind::Hyper)]
     #[case("WarpTerminal", TerminalKind::Warp)]
     #[case("ghostty", TerminalKind::Ghostty)]
+    #[case("rio", TerminalKind::Rio)]
+    #[case("RIO", TerminalKind::Rio)]
     #[case("mintty", TerminalKind::Mintty)]
     #[case("Windows_Terminal", TerminalKind::WindowsTerminal)]
     #[case("GHOSTTY", TerminalKind::Ghostty)]
@@ -338,6 +342,10 @@ mod tests {
     #[case("screen.xterm-256color", TerminalKind::Screen)]
     #[case("screen-256color", TerminalKind::Screen)]
     #[case("xterm-256color", TerminalKind::Xterm)]
+    #[case("rio", TerminalKind::Rio)]
+    #[case("rio-256color", TerminalKind::Rio)]
+    #[case("riot", TerminalKind::Unknown)]
+    #[case("not-rio", TerminalKind::Unknown)]
     #[case("stupid", TerminalKind::Unknown)]
     #[case("not-xterm", TerminalKind::Unknown)]
     #[case("not-ghostty", TerminalKind::Unknown)]

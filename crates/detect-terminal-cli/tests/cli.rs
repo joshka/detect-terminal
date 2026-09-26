@@ -109,3 +109,24 @@ fn human_output_escapes_environment_controls_but_json_preserves_values() {
         }
     }
 }
+
+#[test]
+fn identifies_rio_and_preserves_its_version() {
+    let output = Command::new(env!("CARGO_BIN_EXE_detect-terminal"))
+        .arg("--json")
+        .env_clear()
+        .env("TERM_PROGRAM", "rio")
+        .env("TERM_PROGRAM_VERSION", "0.5.27")
+        .env("TERM", "rio")
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(value["kind"], "Rio");
+    assert_eq!(value["version"], "0.5.27");
+    assert_eq!(
+        value["detected_via"],
+        serde_json::json!(["env: TERM_PROGRAM"])
+    );
+    assert_eq!(value["identifiers"][0]["value"], "rio");
+}
