@@ -1,9 +1,15 @@
 [package]
 name = "detect-terminal"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Identify terminal applications and multiplexers from environment hints"
+readme = "../../README.md"
+keywords = ["terminal", "environment", "detection", "tmux"]
+categories = ["command-line-interface"]
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"

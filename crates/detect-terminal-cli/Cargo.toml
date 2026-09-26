@@ -1,12 +1,20 @@
 [package]
 name = "detect-terminal-cli"
-version = "0.1.0"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Inspect terminal identity, multiplexer metadata, and detection evidence"
+readme = "README.md"
+keywords = ["terminal", "environment", "detection", "cli"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 clap = { version = "4.5.53", features = ["derive"] }
 serde_json = "1.0.145"
-detect-terminal = { path = "../detect-terminal" }
+detect-terminal = { version = "0.1.0", path = "../detect-terminal" }
 
 [[bin]]
 name = "detect-terminal"
