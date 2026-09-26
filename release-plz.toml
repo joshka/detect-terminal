@@ -1,0 +1,19 @@
+[workspace]
+# Publish only after a release PR is merged, keeping version review explicit.
+release_always = false
+dependencies_update = false
+git_tag_enable = false
+git_release_enable = false
+git_tag_name = "v{{ version }}"
+
+[[package]]
+name = "detect-terminal"
+changelog_path = "CHANGELOG.md"
+changelog_include = ["detect-terminal-cli"]
+git_tag_enable = true
+git_release_enable = true
+git_release_name = "v{{ version }}"
+
+[[package]]
+name = "detect-terminal-cli"
+changelog_update = false

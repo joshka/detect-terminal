@@ -1,29 +1,28 @@
 # Releasing
 
-The workspace publishes two crates at a shared version: the `detect-terminal` library and the
-`detect-terminal-cli` package, which installs the `detect-terminal` executable. Releases are manual;
-CI validates changes but does not upload crates or create releases.
+The workspace publishes the `detect-terminal` library and `detect-terminal-cli` package at a shared
+version. [Release-plz](https://release-plz.dev/) prepares a pull request with version and changelog
+updates. Merging that PR into `main` authorizes publication after the release workflow passes CI.
+The library owns the shared `v<version>` tag and GitHub release.
 
-Use current stable Cargo for packaging and publishing. The minimum supported compiler is a separate
-compatibility requirement; see [Contributing](../CONTRIBUTING.md#setup) for the MSRV policy and tool
-setup.
+## Review the Release PR
 
-## Prepare the Release
-
-1. Review changes since the previous release for API compatibility, detection precedence, command
-   behavior, CLI arguments, and JSON output. Choose a version that reflects their impact on callers.
-1. Set `workspace.package.version` in the root `Cargo.toml` and update the CLI's `detect-terminal`
-   dependency requirement in `crates/detect-terminal-cli/Cargo.toml` to the release version. Both
-   packages inherit the workspace version. Refresh their lockfile entries with
-   `cargo check --workspace` and inspect the diff for unrelated dependency changes.
-1. Turn the Unreleased section in `CHANGELOG.md` into release notes with the version and date.
-   Explain behavior changes and any migration steps. Align the README, CLI help, and Rustdoc with
+1. Review the proposed version against changes to the public API, detection precedence, command
+   behavior, CLI arguments, and JSON output. Release-plz checks library API compatibility, but
+   behavioral changes still need maintainer review.
+1. Check that both packages inherit the workspace version and that the CLI's library dependency and
+   lockfile agree. Release-plz updates workspace packages without refreshing unrelated dependencies.
+   If the proposed version is wrong, use `release-plz set-version <version>` on the release PR and
+   inspect the resulting manifests, lockfile, and changelog.
+1. Edit `CHANGELOG.md` into useful release notes: explain behavior changes and any migration steps.
+   Generated commit summaries are a starting point. Align the README, CLI help, and Rustdoc with
    what ships.
-1. Confirm the repository URL and package metadata are accurate. Before the first release, create
-   the public repository and confirm that both crate names are available. For later releases,
-   confirm publishing access to both existing crates.
-1. Commit the release preparation and push the revision for CI. Publish from a clean checkout of
-   that exact revision.
+1. Complete the validation below and wait for CI on the latest PR revision before merging. The
+   workflow explicitly dispatches CI on release PR branches because they are created with
+   `GITHUB_TOKEN`.
+
+Use current stable Cargo for packaging. The minimum supported compiler is a separate compatibility
+requirement; see [Contributing](../CONTRIBUTING.md#setup) for the MSRV policy and tool setup.
 
 ## Validate the Candidate
 
@@ -62,22 +61,39 @@ registry, including before the library's first publication.
 Record the revision and check results in the release review. If source, metadata, or dependencies
 change after validation, rerun the affected checks and require CI on the new revision.
 
-## Publish and Verify
+## Publication and Verification
 
-With publishing credentials configured for crates.io, run:
+The `Release` workflow runs the full CI suite on `main`, then runs `release-plz release`. With
+`release_always = false`, publication requires a merged release PR. Cargo publishes the library
+before the CLI; release-plz creates the tag and GitHub release. The next job prepares or updates any
+pending release PR. Ordinary development commits do not publish crates.
 
-```sh
-cargo publish --workspace --locked
-```
+Publishing uses short-lived crates.io credentials obtained through GitHub OIDC. Both crates trust
+`joshka/detect-terminal`, workflow `release-plz.yml`, and environment `crates-io`. GitHub restricts
+that environment to the `main` branch. Only the publishing job has `id-token: write`; no Cargo token
+or personal GitHub token is stored in repository secrets. The repository allows Actions to create
+pull requests, and the PR job has the additional permission needed to dispatch CI.
 
-Cargo publishes the library before the CLI that depends on it. If publication stops partway through,
-check which versions reached crates.io before retrying. Published versions cannot be overwritten;
-fixes to an uploaded package require a new version.
+After a successful release:
 
 1. Confirm both versions are visible on crates.io and that docs.rs builds the library successfully.
-1. Install the CLI from crates.io into a fresh location, selecting the released version explicitly
-   with `cargo install detect-terminal-cli --version <version> --locked --root <directory>`.
+1. Install the CLI into a fresh location with
+   `cargo install detect-terminal-cli --version <version> --locked --root <directory>`.
 1. Run the installed executable with `--help` and `--json`. Confirm the output matches the
    documented contract; terminal identity will depend on the environment where it runs.
-1. Tag the validated revision as `v<version>` and create a GitHub release using the changelog notes.
-1. Restore an empty Unreleased section for subsequent changes.
+1. Check that the `v<version>` tag points to the release revision and that the GitHub release
+   contains the intended notes.
+
+## Recover a Failed Release
+
+Read the failed job logs and check which package versions reached crates.io before retrying.
+Published versions cannot be overwritten; fixes to an uploaded package require a new version. For a
+transient failure, rerun the failed workflow jobs on the same revision. Release-plz checks registry
+state and skips versions already published. Verify both crates and the shared tag after any partial
+release.
+
+If authentication fails, compare the workflow filename and environment with each crate's trusted
+publisher configuration, and check the environment's branch restriction. Renaming any of these
+requires updating the corresponding configuration. Refer to the
+[trusted publishing setup](https://release-plz.dev/docs/github/quickstart#2-set-up-trusted-publishing)
+when changing the release workflow.
