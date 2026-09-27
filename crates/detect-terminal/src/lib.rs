@@ -128,6 +128,67 @@
 //! assert!(info.command_probes.is_empty());
 //! ```
 //!
+//! # Edge cases and likely mismatches
+//!
+//! A matched hint is evidence about the process environment, not proof of the application
+//! currently drawing the terminal. The following cases are especially relevant on Windows and
+//! Linux. See [`TerminalInfo::detected_via`] and [`TerminalInfo::identifiers`] to check which hint
+//! won when several are present.
+//!
+//! ## Windows Terminal
+//!
+//! Its normal connection path supplies `WT_SESSION`. When Windows Terminal attaches as the
+//! default host after the shell starts, that shell may receive no marker. With no other recognized
+//! hint, detection returns [`Unknown`](TerminalKind::Unknown) or a `TERM` emulation family.
+//!
+//! ## Alacritty
+//!
+//! Without its terminfo entry, Alacritty uses `TERM=xterm-256color`. Its `ALACRITTY_SOCKET`
+//! marker is Unix-only and can be absent. With only that shared `TERM`, detection returns
+//! [`Xterm`](TerminalKind::Xterm), not Alacritty.
+//!
+//! ## foot
+//!
+//! A build without foot terminfo can also use `TERM=xterm-256color`. Without another marker, the
+//! result is [`Xterm`](TerminalKind::Xterm), not foot.
+//!
+//! ## Tilix
+//!
+//! Tilix sets `TILIX_ID` but copies many parent variables. If it inherits a nonempty `WT_SESSION`
+//! and no recognized `TERM_PROGRAM` is present, this detector selects Windows Terminal because
+//! `WT_SESSION` precedes `TILIX_ID`. This is a possible precedence outcome, not a live observation.
+//!
+//! ## Cmder
+//!
+//! Cmder can run on ConEmu, supplying `CMDER_ROOT` alongside ConEmu markers. The Cmder marker wins
+//! when both are present.
+//!
+//! ## ConEmu
+//!
+//! If `CMDER_ROOT` remains set in a later ConEmu session, detection selects Cmder before ConEmu's
+//! own markers. This is a possible inherited-variable outcome, not a live observation.
+//!
+//! ## GNU Screen
+//!
+//! `TERM=screen*` describes emulation rather than proof of a Screen session. If no multiplexer
+//! marker is present, this terminfo name alone can yield a misleading
+//! [`Screen`](TerminalKind::Screen) result.
+//!
+//! ## tmux
+//!
+//! A nonempty `TMUX` marker prevents `TERM=screen*` from claiming Screen. With commands enabled,
+//! the client term name is a terminfo name and may be ambiguous when several clients are attached.
+//!
+//! ## Zellij
+//!
+//! A nonempty `ZELLIJ` marker also prevents `TERM=screen*` from claiming Screen. If the marker is
+//! absent, the shared terminfo name alone can still yield Screen.
+//!
+//! No combination of these environment hints can establish terminal capabilities or recover an
+//! identity that was never passed to the process. See the repository's
+//! [source-backed environment fixtures](https://github.com/joshka/detect-terminal/blob/main/docs/terminal-environments.md)
+//! for upstream code and representative inputs.
+//!
 //! # Diagnostics and privacy
 //!
 //! [`TerminalInfo::raw_env_subset`] captures consulted variables by default. Disabling

@@ -9,6 +9,8 @@ use crate::multiplexer::MultiplexerInfo;
 /// can mean only that `TERM` names an xterm-compatible emulation. Inspect
 /// [`TerminalInfo::detected_via`] to distinguish a program marker from a terminfo fallback.
 /// See [Detection logic](crate#detection-logic) for precedence and each variant for its markers.
+/// See [Edge cases and likely mismatches](crate#edge-cases-and-likely-mismatches) before treating a
+/// result as the current application's identity.
 /// Listed `TERM` families match the exact name or a suffix beginning with `-` or `.`.
 /// Program names and terminfo names are matched case-insensitively; presence markers must be
 /// nonempty.
@@ -34,6 +36,8 @@ pub enum TerminalKind {
     /// Alacritty terminal emulator. <https://alacritty.org>
     ///
     /// Markers: `ALACRITTY_SOCKET`, `TERM=alacritty`.
+    /// If Alacritty falls back to `TERM=xterm-256color` and has no socket marker, this variant
+    /// cannot be selected from those hints alone.
     Alacritty,
     /// Terminal.app on macOS. <https://support.apple.com/guide/terminal/welcome/mac>
     ///
@@ -42,6 +46,7 @@ pub enum TerminalKind {
     /// Cmder terminal emulator. <https://cmder.app>
     ///
     /// Markers: `CMDER_ROOT`.
+    /// An inherited `CMDER_ROOT` can outlive the Cmder window that originally set it.
     Cmder,
     /// ConEmu terminal emulator. <https://conemu.github.io>
     ///
@@ -50,6 +55,8 @@ pub enum TerminalKind {
     /// foot terminal emulator. <https://codeberg.org/dnkl/foot>
     ///
     /// Markers: `TERM=foot`.
+    /// A build without foot terminfo can use `TERM=xterm-256color` and will not select this kind
+    /// from `TERM` alone.
     Foot,
     /// Ghostty terminal emulator. <https://ghostty.org>
     ///
@@ -108,10 +115,12 @@ pub enum TerminalKind {
     /// Tilix terminal emulator. <https://gnunn1.github.io/tilix-web/>
     ///
     /// Markers: `TILIX_ID`.
+    /// Tilix copies many parent variables. A retained higher-priority marker can mask `TILIX_ID`.
     Tilix,
     /// VTE-based terminal emulator. <https://wiki.gnome.org/Apps/Terminal/VTE>
     ///
     /// Markers: `VTE_VERSION`.
+    /// This names the VTE emulation family, not a particular application using VTE.
     Vte,
     /// Visual Studio Code terminal. <https://code.visualstudio.com/docs/terminal/basics>
     ///
@@ -127,11 +136,16 @@ pub enum TerminalKind {
     WezTerm,
     /// Windows Terminal. <https://aka.ms/terminal>
     ///
-    /// Markers: `WT_SESSION`, `TERM_PROGRAM=Windows_Terminal`.
+    /// Markers: `WT_SESSION`, `TERM_PROGRAM=Windows_Terminal` or `WindowsTerminal`.
+    /// `WT_SESSION` can be absent when Windows Terminal attaches as the default console host
+    /// after the shell has started. The `TERM_PROGRAM` values are recognized when supplied, but
+    /// Windows Terminal does not inject them in its normal connection path.
     WindowsTerminal,
     /// xterm terminal emulator. <https://invisible-island.net/xterm/>
     ///
     /// Markers: `XTERM_VERSION`, `TERM=xterm`.
+    /// A `TERM=xterm*` match identifies an emulation family; Alacritty, foot, and other
+    /// applications can use `xterm-256color`.
     Xterm,
     /// Unknown or unsupported terminal.
     Unknown,
@@ -278,6 +292,9 @@ pub struct CommandProbe {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TerminalInfo {
     /// Application or emulation family selected from the available hints.
+    ///
+    /// See [Edge cases and likely mismatches](crate#edge-cases-and-likely-mismatches) when a
+    /// marker may be inherited or a `TERM` name is shared by multiple applications.
     pub kind: TerminalKind,
 
     /// `TERM_PROGRAM_VERSION` only when `TERM_PROGRAM` identified the selected kind.
