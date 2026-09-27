@@ -6,14 +6,20 @@ build it.
 
 ## Installation
 
+From crates.io:
+
+```sh
+cargo install detect-terminal-cli --locked
+```
+
 From the repository root:
 
 ```sh
 cargo install --path crates/detect-terminal-cli --locked
 ```
 
-The package is named `detect-terminal-cli`; the installed executable is `detect-terminal`. After
-publication, install the package from crates.io with `cargo install detect-terminal-cli --locked`.
+The package is named `detect-terminal-cli`; the installed executable is `detect-terminal`.
+Applications that need a Rust API should depend on the `detect-terminal` library.
 
 ## Inspect the Current Environment
 

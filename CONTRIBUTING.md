@@ -18,6 +18,7 @@ rustup toolchain install nightly --component rustfmt
 rustup toolchain install 1.88.0
 cargo install just --version 1.58.0 --locked
 cargo install rumdl --version 0.2.77 --locked
+cargo install cargo-docs-rs --version 1.0.4 --locked
 ```
 
 For dependency policy and workflow security checks, also install:
@@ -40,8 +41,9 @@ just check
 ```
 
 `just check` validates Rust and Markdown formatting, runs workspace tests and doctests, rejects
-Clippy warnings, and builds public and private Rustdoc with warnings treated as errors. Use
-`just --list` for focused recipes. `cargo check -p detect-terminal` provides a quick library check.
+Clippy warnings, and builds public, private, and docs.rs-style Rustdoc. Use `just docs-rs` to check
+published package documentation on its own. Use `just --list` for other focused recipes.
+`cargo check -p detect-terminal` provides a quick library check.
 
 Run the CLI with `cargo run -p detect-terminal-cli -- --json --pretty`. It uses environment-only
 detection unless `--commands` is supplied.

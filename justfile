@@ -3,7 +3,7 @@ default:
     @just --list
 
 # Run the checks expected before sharing a change.
-check: fmt-check test clippy docs docs-private
+check: fmt-check test clippy docs docs-private docs-rs
 
 # Format Rust and Markdown.
 fmt: fmt-rust fmt-md
@@ -42,6 +42,11 @@ docs:
 # Validate links and contracts in private API documentation too.
 docs-private:
     RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --locked --document-private-items
+
+# Reproduce the docs.rs build for each published package with nightly Rustdoc.
+docs-rs:
+    cargo +nightly docs-rs --package detect-terminal --locked
+    cargo +nightly docs-rs --package detect-terminal-cli --locked
 
 # Run all tests on the minimum supported compiler.
 msrv:

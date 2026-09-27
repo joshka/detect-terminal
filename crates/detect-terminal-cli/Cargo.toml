@@ -6,7 +6,6 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "Inspect terminal identity, multiplexer metadata, and detection evidence"
-readme = "README.md"
 keywords = ["terminal", "environment", "detection", "cli"]
 categories = ["command-line-utilities"]
 
