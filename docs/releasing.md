@@ -76,7 +76,9 @@ pull requests, and the PR job has the additional permission needed to dispatch C
 
 After a successful release:
 
-1. Confirm both versions are visible on crates.io and that docs.rs builds the library successfully.
+1. Confirm both versions are visible on crates.io and that docs.rs builds both packages
+   successfully. The CLI package has a documentation library for its executable's README; detection
+   APIs remain in `detect-terminal`.
 1. Install the CLI into a fresh location with
    `cargo install detect-terminal-cli --version <version> --locked --root <directory>`.
 1. Run the installed executable with `--help` and `--json`. Confirm the output matches the

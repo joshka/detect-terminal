@@ -24,7 +24,7 @@ asserting every whitespace detail unless formatting itself is the contract.
 | Change                        | Relevant evidence                                                       |
 | ----------------------------- | ----------------------------------------------------------------------- |
 | Detection or command behavior | Regression tests, workspace tests, Clippy, affected docs                |
-| Public API or examples        | Workspace tests, public and private Rustdoc                             |
+| Public API or examples        | Workspace tests, public, private, and docs.rs-style Rustdoc             |
 | CLI                           | Binary integration tests, output error tests, help and README alignment |
 | Markdown                      | Prose review and `just fmt-md-check`                                    |
 | Dependency or MSRV            | Stable checks, `just msrv`, `just deny`, package verification           |
