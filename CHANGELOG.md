@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## [0.1.2](https://github.com/joshka/detect-terminal/compare/v0.1.1...v0.1.2) - 2026-09-27
+
+### Other
+
+- Validate docs.rs builds for both packages
+
 ## [0.1.1](https://github.com/joshka/detect-terminal/compare/v0.1.0...v0.1.1) - 2026-09-27
 
 ### Fixed
