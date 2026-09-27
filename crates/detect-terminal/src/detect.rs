@@ -193,6 +193,7 @@ fn program_kind(program: &str) -> Option<TerminalKind> {
         "rio" => TerminalKind::Rio,
         "mintty" => TerminalKind::Mintty,
         "windows_terminal" => TerminalKind::WindowsTerminal,
+        "windowsterminal" => TerminalKind::WindowsTerminal,
         _ => return None,
     })
 }
@@ -315,6 +316,119 @@ mod tests {
         assert_eq!(
             info.raw_env_subset.get(key).map(String::as_str),
             Some("marker value")
+        );
+    }
+
+    /// These snapshots pair variables set together by terminal launch code. The pinned source
+    /// locations are recorded in docs/terminal-environments.md.
+    #[rstest]
+    #[case(
+        &[("WT_SESSION", "5720ee6d-6474-47b0-88db-fa7e10e60d37"),
+          ("WT_PROFILE_ID", "{61c54bbd-c2c6-5271-96e7-009a87ff44bf}"),
+          ("WSLENV", "WT_SESSION:WT_PROFILE_ID")],
+        TerminalKind::WindowsTerminal,
+        "WT_SESSION"
+    )]
+    #[case(
+        &[("TERM_PROGRAM", "WezTerm"), ("TERM_PROGRAM_VERSION", "20240203-110809-5046fc22"),
+          ("TERM", "xterm-256color"), ("COLORTERM", "truecolor"),
+          ("WEZTERM_PANE", "1"), ("WSLENV", "TERM:COLORTERM:TERM_PROGRAM:TERM_PROGRAM_VERSION")],
+        TerminalKind::WezTerm,
+        "TERM_PROGRAM"
+    )]
+    #[case(
+        &[("TERM", "alacritty"), ("COLORTERM", "truecolor")],
+        TerminalKind::Alacritty,
+        "TERM"
+    )]
+    #[case(
+        &[("TERM", "xterm-kitty"), ("COLORTERM", "truecolor"),
+          ("KITTY_PID", "12345"), ("KITTY_WINDOW_ID", "1")],
+        TerminalKind::Kitty,
+        "KITTY_WINDOW_ID"
+    )]
+    #[case(
+        &[("TERM", "xterm-256color"), ("TILIX_ID", "27112661-2949-4e06-9abd-81b91fd68fd7"),
+          ("VTE_VERSION", "7600")],
+        TerminalKind::Tilix,
+        "TILIX_ID"
+    )]
+    #[case(
+        &[("TERM", "xterm-256color"),
+          ("GNOME_TERMINAL_SERVICE", ":1.42"),
+          ("GNOME_TERMINAL_SCREEN", "/org/gnome/Terminal/screen/1")],
+        TerminalKind::GnomeTerminal,
+        "GNOME_TERMINAL_SERVICE"
+    )]
+    #[case(
+        &[("TERM", "xterm-256color"), ("KONSOLE_VERSION", "250800")],
+        TerminalKind::Konsole,
+        "KONSOLE_VERSION"
+    )]
+    #[case(
+        &[("TERM", "foot"), ("COLORTERM", "truecolor")],
+        TerminalKind::Foot,
+        "TERM"
+    )]
+    #[case(
+        &[("TERM", "xterm-256color"),
+          ("TERMINATOR_UUID", "urn:uuid:27112661-2949-4e06-9abd-81b91fd68fd7")],
+        TerminalKind::Terminator,
+        "TERMINATOR_UUID"
+    )]
+    #[case(
+        &[("ConEmuHWND", "0x001A022E"), ("ConEmuPID", "12345")],
+        TerminalKind::ConEmu,
+        "ConEmuPID"
+    )]
+    #[case(
+        &[("CMDER_ROOT", "C:\\cmder"),
+          ("ConEmuHWND", "0x001A022E"), ("ConEmuPID", "12345")],
+        TerminalKind::Cmder,
+        "CMDER_ROOT"
+    )]
+    #[case(
+        &[("TERM_PROGRAM", "mintty"), ("TERM_PROGRAM_VERSION", "3.7.0"),
+          ("TERM", "xterm")],
+        TerminalKind::Mintty,
+        "TERM_PROGRAM"
+    )]
+    fn upstream_launch_environments_select_the_product(
+        #[case] variables: &[(&str, &str)],
+        #[case] kind: TerminalKind,
+        #[case] marker: &str,
+    ) {
+        let info = detect_from_env(&env(variables));
+        assert_eq!(info.kind, kind);
+        assert_eq!(
+            info.detected_via,
+            vec![DetectionSource::EnvVar(marker.into())]
+        );
+        assert_eq!(info.identifiers[0].key, marker);
+    }
+
+    #[test]
+    fn windows_terminal_accepts_common_profile_program_spelling() {
+        let info = detect_from_env(&env(&[("TERM_PROGRAM", "WindowsTerminal")]));
+        assert_eq!(info.kind, TerminalKind::WindowsTerminal);
+        assert_eq!(
+            info.detected_via,
+            vec![DetectionSource::EnvVar("TERM_PROGRAM".into())]
+        );
+    }
+
+    #[test]
+    fn wezterm_launched_from_windows_terminal_uses_its_own_program_marker() {
+        let info = detect_from_env(&env(&[
+            ("WT_SESSION", "5720ee6d-6474-47b0-88db-fa7e10e60d37"),
+            ("TERM_PROGRAM", "WezTerm"),
+            ("TERM", "xterm-256color"),
+            ("WEZTERM_PANE", "1"),
+        ]));
+        assert_eq!(info.kind, TerminalKind::WezTerm);
+        assert_eq!(
+            info.detected_via,
+            vec![DetectionSource::EnvVar("TERM_PROGRAM".into())]
         );
     }
 
