@@ -4,9 +4,13 @@
 
 ## [0.1.2](https://github.com/joshka/detect-terminal/compare/v0.1.1...v0.1.2) - 2026-09-27
 
-### Other
+### Fixed
 
-- Validate docs.rs builds for both packages
+- Publish CLI usage documentation on docs.rs alongside the library API documentation.
+
+### Maintenance
+
+- Check both packages with docs.rs-style Rustdoc in local and hosted CI before release.
 
 ## [0.1.1](https://github.com/joshka/detect-terminal/compare/v0.1.0...v0.1.1) - 2026-09-27
 
