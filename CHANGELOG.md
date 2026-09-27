@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## [0.1.1](https://github.com/joshka/detect-terminal/compare/v0.1.0...v0.1.1) - 2026-09-27
+
+### Fixed
+
+- Recognize user-configured `TERM_PROGRAM=WindowsTerminal` as Windows Terminal.
+
+### Documentation
+
+- Explain Windows and Linux terminal detection limits with source-backed environment fixtures.
+
 ## 0.1.0 - 2026-09-26
 
 Initial release:
