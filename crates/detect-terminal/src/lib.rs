@@ -154,6 +154,9 @@
 //! See the [Apple Terminal evidence](https://github.com/joshka/detect-terminal/blob/main/docs/terminal-environments.md#apple-terminal-color)
 //! for the build reports and their limits.
 //!
+//! To choose a color encoding, use the `supports_*` methods, which include higher levels. The
+//! `is_*` methods match one variant exactly. See [`ColorSupport`] for the comparison.
+//!
 //! # Edge cases and likely mismatches
 //!
 //! A matched hint is evidence about the process environment, not proof of the application
