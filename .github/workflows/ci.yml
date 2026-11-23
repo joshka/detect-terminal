@@ -50,7 +50,7 @@ jobs:
         with:
           persist-credentials: false
       - run: rustup toolchain install "$TOOLCHAIN" --profile minimal --component clippy
-      - uses: jdx/mr-boxington-action@v1.7.3
+      - uses: jdx/mr-boxington-action@v1.7.4
         with:
           version: 1.30.0
           toolchain: ${{ matrix.rust }}
