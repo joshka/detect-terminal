@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## [0.1.4](https://github.com/joshka/detect-terminal/compare/v0.1.3...v0.1.4) - 2026-11-23
+
+### Other
+
+- Add color support predicates ([#14](https://github.com/joshka/detect-terminal/pull/14))
+
 ## [0.1.3](https://github.com/joshka/detect-terminal/compare/v0.1.2...v0.1.3) - 2026-11-23
 
 ### Other
