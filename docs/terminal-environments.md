@@ -46,10 +46,15 @@ indexed colors. Build 464 is the first reported to work; 470 is the first uncont
 
 ## Other color evidence
 
+- tmux 3.2 first sets `TERM_PROGRAM=tmux` and its version for panes; 3.6 also
+  [sets `COLORTERM=truecolor`][tmux-env]. Local checks of 3.2, 3.3a, 3.4, 3.5a, and 3.8 with
+  simulated outer environments passed RGB through for Ghostty and converted it to indexed color for
+  a plain `xterm-256color` client.
 - The termstandard list says Windows Terminal supports [24-bit color][wt-color].
 - The same list says iTerm2 has supported RGB [since version 3][iterm-color].
 
 [iterm-color]: https://github.com/termstandard/colors
+[tmux-env]: https://github.com/tmux/tmux/blob/3.6/environ.c
 [wt-color]: https://github.com/termstandard/colors
 
 ## Windows Terminal

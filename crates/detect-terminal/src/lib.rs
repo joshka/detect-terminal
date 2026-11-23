@@ -136,15 +136,19 @@
 //! default for [`Unknown`](ColorSupport::Unknown) belong to the application. Optional command
 //! probes do not supply color evidence. The first matching rule applies:
 //!
-//! 1. A detected multiplexer, or a `TERM` family of `tmux`, `screen`, or `dumb`, yields `Unknown`.
+//! 1. Detected tmux with `TERM_PROGRAM=tmux`, a release version of 3.2 or later, and `TERM` other
+//!    than `dumb` yields [`TrueColor`](ColorSupport::TrueColor). Such a tmux accepts RGB. It
+//!    converts colors for an outer terminal it does not know supports RGB, so this does not
+//!    establish what that terminal displays.
+//! 2. Any other multiplexer, or a `TERM` family of `tmux`, `screen`, or `dumb`, yields `Unknown`.
 //!    Remaining hints can be inherited from an outer terminal.
-//! 2. Apple Terminal builds before 464 yield [`Ansi256`](ColorSupport::Ansi256); build 464 (macOS
-//!    26.0 Tahoe) and later yield [`TrueColor`](ColorSupport::TrueColor). A dotted build uses its
-//!    leading integer. A parsed build overrides `COLORTERM`.
-//! 3. Windows Terminal, or iTerm2 3 or later, yields `TrueColor`.
-//! 4. `COLORTERM` of `truecolor` or `24bit` yields `TrueColor`.
-//! 5. `TERM` ending in `-direct` yields `TrueColor`, except for Apple Terminal.
-//! 6. Anything else yields `Unknown`, including Apple Terminal with no parsable build.
+//! 3. Apple Terminal builds before 464 yield [`Ansi256`](ColorSupport::Ansi256); build 464 (macOS
+//!    26.0 Tahoe) and later yield `TrueColor`. A dotted build uses its leading integer. A parsed
+//!    build overrides `COLORTERM`.
+//! 4. Windows Terminal, or iTerm2 3 or later, yields `TrueColor`.
+//! 5. `COLORTERM` of `truecolor` or `24bit` yields `TrueColor`.
+//! 6. `TERM` ending in `-direct` yields `TrueColor`, except for Apple Terminal.
+//! 7. Anything else yields `Unknown`, including Apple Terminal with no parsable build.
 //!    `TERM=xterm-256color` is a common default that does not rule out RGB support.
 //!
 //! See the [Apple Terminal evidence](https://github.com/joshka/detect-terminal/blob/main/docs/terminal-environments.md#apple-terminal-color)
