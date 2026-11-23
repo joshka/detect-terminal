@@ -101,6 +101,20 @@ fn print_human(writer: &mut impl Write, info: &detect_terminal::TerminalInfo) ->
         writeln!(writer, "term: {term}")?;
     }
 
+    if let Some(colorterm) = &info.colorterm {
+        let colorterm = colorterm.escape_debug();
+        writeln!(writer, "colorterm: {colorterm}")?;
+    }
+    writeln!(writer, "inferred color support: {}", info.color.support)?;
+    if !info.color.inferred_via.is_empty() {
+        writeln!(writer, "color inferred via:")?;
+        for source in &info.color.inferred_via {
+            let source = source.to_string();
+            let source = source.escape_debug();
+            writeln!(writer, "- {source}")?;
+        }
+    }
+
     if let Some(mux) = &info.multiplexer {
         writeln!(writer, "multiplexer: {}", mux.kind)?;
         if let Some(version) = &mux.version {
@@ -193,6 +207,13 @@ fn print_json(
         .map(|source| Value::String(source.to_string()))
         .collect();
 
+    let color_inferred_via: Vec<Value> = info
+        .color
+        .inferred_via
+        .iter()
+        .map(|source| Value::String(source.to_string()))
+        .collect();
+
     let identifiers: Vec<Value> = info
         .identifiers
         .iter()
@@ -227,6 +248,11 @@ fn print_json(
         "term_program": info.term_program,
         "term_program_version": info.term_program_version,
         "term": info.term,
+        "colorterm": info.colorterm,
+        "color": {
+            "support": info.color.support.to_string(),
+            "inferred_via": color_inferred_via,
+        },
         "raw_name": info.raw_name,
         "multiplexer": mux,
         "detected_via": detected_via,

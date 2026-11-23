@@ -47,7 +47,8 @@
 //!
 //! Environment hints may be inherited, overridden, or absent after SSH, sudo, or nested sessions.
 //! This crate does not verify a live terminal, query escape sequences, detect whether stdout is a
-//! TTY, or infer color and keyboard protocol support. Use `std::io::IsTerminal` for a TTY check.
+//! TTY, or infer keyboard protocol support. Color support is inferred, not measured. Use
+//! `std::io::IsTerminal` for a TTY check.
 //!
 //! # Choose an entry point
 //!
@@ -128,6 +129,27 @@
 //! assert!(info.command_probes.is_empty());
 //! ```
 //!
+//! # Color support
+//!
+//! [`TerminalInfo::color`] infers color support from the hints and keeps its evidence separate from
+//! identity evidence. It does not decide whether to emit color: `NO_COLOR`, TTY checks, and the
+//! default for [`Unknown`](ColorSupport::Unknown) belong to the application. Optional command
+//! probes do not supply color evidence. The first matching rule applies:
+//!
+//! 1. A detected multiplexer, or a `TERM` family of `tmux`, `screen`, or `dumb`, yields `Unknown`.
+//!    Remaining hints can be inherited from an outer terminal.
+//! 2. Apple Terminal builds before 464 yield [`Ansi256`](ColorSupport::Ansi256); build 464 (macOS
+//!    26.0 Tahoe) and later yield [`TrueColor`](ColorSupport::TrueColor). A dotted build uses its
+//!    leading integer. A parsed build overrides `COLORTERM`.
+//! 3. Windows Terminal, or iTerm2 3 or later, yields `TrueColor`.
+//! 4. `COLORTERM` of `truecolor` or `24bit` yields `TrueColor`.
+//! 5. `TERM` ending in `-direct` yields `TrueColor`, except for Apple Terminal.
+//! 6. Anything else yields `Unknown`, including Apple Terminal with no parsable build.
+//!    `TERM=xterm-256color` is a common default that does not rule out RGB support.
+//!
+//! See the [Apple Terminal evidence](https://github.com/joshka/detect-terminal/blob/main/docs/terminal-environments.md#apple-terminal-color)
+//! for the build reports and their limits.
+//!
 //! # Edge cases and likely mismatches
 //!
 //! A matched hint is evidence about the process environment, not proof of the application
@@ -184,7 +206,7 @@
 //! A nonempty `ZELLIJ` marker also prevents `TERM=screen*` from claiming Screen. If the marker is
 //! absent, the shared terminfo name alone can still yield Screen.
 //!
-//! No combination of these environment hints can establish terminal capabilities or recover an
+//! No combination of these environment hints can prove terminal capabilities or recover an
 //! identity that was never passed to the process. See the repository's
 //! [source-backed environment fixtures](https://github.com/joshka/detect-terminal/blob/main/docs/terminal-environments.md)
 //! for upstream code and representative inputs.
@@ -204,6 +226,7 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs, missing_debug_implementations)]
 
+mod color;
 mod command;
 mod detect;
 mod env;
@@ -211,6 +234,7 @@ mod multiplexer;
 mod options;
 mod terminal;
 
+pub use crate::color::{ColorInfo, ColorSupport};
 pub use crate::detect::{detect, detect_from_env, detect_with_options};
 pub use crate::env::EnvMap;
 pub use crate::multiplexer::{MultiplexerInfo, MultiplexerKind};

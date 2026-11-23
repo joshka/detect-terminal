@@ -19,6 +19,39 @@ They are not captures from a running Windows or Linux machine. Source links are 
 | Cmder            | [launcher][cmder-launch] | `CMDER_ROOT`             |
 | mintty           | [child][mintty-child]    | `TERM_PROGRAM=mintty`    |
 
+## Apple Terminal color
+
+Terminal.app's `TERM_PROGRAM_VERSION` is its build. These are third-party reports, not captures made
+by this project. A reported `COLORTERM` could have been exported by the user, though build 466's
+[capture][apple-466] shows it among Terminal's other variables.
+
+| Build | macOS        | RGB rendering                                | `COLORTERM`                  |
+| ----- | ------------ | -------------------------------------------- | ---------------------------- |
+| 455.1 | 15.8         | [Misrenders][apple-455], sampled             | Unset                        |
+| 464   | 26.0 (Tahoe) | [Renders][apple-464], checked by eye         | [`truecolor`][apple-464-env] |
+| 466   | 26.2–26.3    | Disputed: [no][apple-zsh], [yes][apple-raku] | [`truecolor`][apple-466]     |
+| 470.2 | 26           | [Renders][apple-470], gradient test          | `truecolor` reported         |
+
+Build 466's negative report gives no method. No public release was found using builds 456 through
+463. The detector treats every build before 464 as 256-color, so at worst an early Tahoe beta uses
+indexed colors. Build 464 is the first reported to work; 470 is the first uncontested.
+
+[apple-455]: https://github.com/vshylov/mindfork-rs/pull/716
+[apple-464]: https://github.com/ratatui/ratatui/issues/1972
+[apple-464-env]: https://github.com/iwadon/terse/blob/main/docs/research/terminal-inspection.md
+[apple-466]: https://github.com/kishankalandoor/DevOps/blob/main/env.html
+[apple-470]: https://github.com/OmarMusayev/terminaltui/blob/main/src/style/colors.ts
+[apple-raku]: https://github.com/japhb/Terminal-Capabilities/commit/0393e87db4d0c33f211c65fa3cc04467741ebd33
+[apple-zsh]: https://www.zsh.org/mla/workers/2026/msg00252.html
+
+## Other color evidence
+
+- The termstandard list says Windows Terminal supports [24-bit color][wt-color].
+- The same list says iTerm2 has supported RGB [since version 3][iterm-color].
+
+[iterm-color]: https://github.com/termstandard/colors
+[wt-color]: https://github.com/termstandard/colors
+
 ## Windows Terminal
 
 Its [connection code][wt] adds `WT_SESSION` as a GUID and `WT_PROFILE_ID` as a braced GUID, then

@@ -130,3 +130,29 @@ fn identifies_rio_and_preserves_its_version() {
     );
     assert_eq!(value["identifiers"][0]["value"], "rio");
 }
+
+#[test]
+fn reports_color_inference_in_both_formats() {
+    for (args, expected_json) in [(&[][..], false), (&["--json"][..], true)] {
+        let output = Command::new(env!("CARGO_BIN_EXE_detect-terminal"))
+            .args(args)
+            .env_clear()
+            .env("COLORTERM", "truecolor")
+            .output()
+            .unwrap();
+        assert!(output.status.success());
+        if expected_json {
+            let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+            let color = serde_json::json!({
+                "support": "truecolor",
+                "inferred_via": ["env: COLORTERM"],
+            });
+            assert_eq!(value["color"], color);
+            assert_eq!(value["colorterm"], "truecolor");
+        } else {
+            let text = String::from_utf8(output.stdout).unwrap();
+            assert!(text.contains("inferred color support: truecolor\n"));
+            assert!(text.contains("color inferred via:\n- env: COLORTERM\n"));
+        }
+    }
+}

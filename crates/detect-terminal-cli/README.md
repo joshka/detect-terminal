@@ -28,8 +28,9 @@ detect-terminal
 ```
 
 The human-readable report includes the terminal kind, available version and multiplexer metadata,
-and detection evidence. An `Unknown` result means no supported hint matched. A known kind can name
-an emulation family: `xterm` from `TERM=xterm-256color` does not prove the application is xterm.
+inferred color support, and detection evidence. Color support is not measured. An `Unknown` result
+means no supported hint matched. A known kind can name an emulation family: `xterm` from
+`TERM=xterm-256color` does not prove the application is xterm.
 
 Values are escaped for display so control characters cannot insert report lines or terminal escape
 sequences. JSON preserves the decoded values. Non-Unicode input is decoded lossily in both formats.
@@ -61,6 +62,8 @@ not Rust enum identifiers. For example, an iTerm2 result uses `"iTerm2"`, not `"
 | `schema_version`                                           | Currently `1`                                                                                                             |
 | `kind`, `version`                                          | Selected terminal or emulation name and optional version; unknown kind is `"Unknown"`                                     |
 | `term_program`, `term_program_version`, `term`, `raw_name` | Raw hints, which may differ from the selected identity                                                                    |
+| `colorterm`                                                | Raw `COLORTERM` hint                                                                                                      |
+| `color`                                                    | Object with inferred `support` (`"unknown"`, `"ansi16"`, `"ansi256"`, or `"truecolor"`) and `inferred_via` evidence       |
 | `multiplexer`                                              | `null` or an object with `kind`, `version`, `client_term`, and `client_type`; kind is `"tmux"`, `"screen"`, or `"zellij"` |
 | `detected_via`, `identifiers`                              | Source descriptions and matching environment key/value pairs                                                              |
 | `raw_env_subset`                                           | A map of existing variables consulted before detection finished                                                           |
