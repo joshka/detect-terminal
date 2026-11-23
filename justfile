@@ -64,6 +64,10 @@ ci-check:
 zizmor:
     zizmor --no-progress --strict-collection --persona pedantic .github
 
+# Verify that actions.lock matches the workflows and upstream actions.
+lock-check:
+    gh actions-lock --verify
+
 # Check advisories, licenses, duplicate versions, and dependency sources.
 deny:
     cargo deny --workspace --all-features --locked check --deny warnings

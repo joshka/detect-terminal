@@ -21,11 +21,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/checkout@v6.1.0
         with:
           persist-credentials: false
       - run: rustup toolchain install nightly --profile minimal --component rustfmt
-      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+      - uses: taiki-e/install-action@v2.90.5
         with:
           tool: just@1.58.0,rumdl@0.2.77
       - run: just fmt-check
@@ -48,7 +48,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/checkout@v6.1.0
         with:
           persist-credentials: false
       - run: rustup toolchain install "$TOOLCHAIN" --profile minimal --component clippy
@@ -60,14 +60,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/checkout@v6.1.0
         with:
           persist-credentials: false
       - run: rustup toolchain install stable --profile minimal
       - run: rustup toolchain install nightly --profile minimal
-      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+      - uses: taiki-e/install-action@v2.90.5
         with:
           tool: just@1.58.0
+          fallback: none # Accept only checksummed tools, without an install token.
       - run: cargo install cargo-docs-rs --version 1.0.4 --locked
       - run: just docs docs-private docs-rs package
 
@@ -76,13 +77,29 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/checkout@v6.1.0
         with:
           persist-credentials: false
-      - uses: taiki-e/install-action@4cef1412cce204788f482e778a0b9187f9626a29 # v2.87.21
+      - uses: taiki-e/install-action@v2.90.5
         with:
-          tool: just@1.58.0,zizmor@1.26.1,cargo-deny@0.20.2
+          tool: just@1.58.0,zizmor@1.32.0,cargo-deny@0.20.2
+          fallback: none # Accept only checksummed tools, without an install token.
       - run: just zizmor
         env:
           GH_TOKEN: ${{ github.token }}
       - run: just deny
+
+  # Checks that .github/workflows/actions.lock matches the workflows. To add or update an action, or
+  # fix a failure here, see docs/github-actions.md.
+  lockfile:
+    name: Actions lockfile
+    runs-on: ubuntu-slim
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v6.1.0
+        with:
+          persist-credentials: false
+      - run: gh extension install github/gh-actions-lock --pin v0.5.1
+      - run: gh actions-lock --verify
