@@ -14,9 +14,9 @@ The library owns the shared `v<version>` tag and GitHub release.
    lockfile agree. Release-plz updates workspace packages without refreshing unrelated dependencies.
    If the proposed version is wrong, use `release-plz set-version <version>` on the release PR and
    inspect the resulting manifests, lockfile, and changelog.
-1. Edit `CHANGELOG.md` into useful release notes: explain behavior changes and any migration steps.
-   Generated commit summaries are a starting point. Align the README, CLI help, and Rustdoc with
-   what ships.
+1. Leave `CHANGELOG.md` to release-plz, which generates the changelog and GitHub release notes from
+   commit summaries. Write commit and PR titles as release notes, because squash merges use one of
+   them. Align the README, CLI help, and Rustdoc with what ships.
 1. Complete the validation below and wait for CI on the latest PR revision before merging. The
    workflow explicitly dispatches CI on release PR branches because they are created with
    `GITHUB_TOKEN`.
@@ -51,7 +51,7 @@ Review the following before approving publication:
   cover argument handling, JSON contracts, and output failures.
 - Dependency policy checks pass, and any exceptions have a specific rationale. Dependency updates
   preserve the declared MSRV and intended downstream behavior.
-- Release notes describe the changes users receive, and the checkout has no unrelated edits.
+- The checkout has no unrelated edits.
 
 Inspect both archives in `target/package/`. Each must contain its README, license texts, and source.
 Check the normalized `Cargo.toml` files for the release version, MSRV, license, and repository URL.
