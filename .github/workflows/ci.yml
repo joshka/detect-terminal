@@ -50,8 +50,14 @@ jobs:
         with:
           persist-credentials: false
       - run: rustup toolchain install "$TOOLCHAIN" --profile minimal --component clippy
-      - run: cargo "+$TOOLCHAIN" test --workspace --all-features --locked
-      - run: cargo "+$TOOLCHAIN" clippy --workspace --all-targets --all-features --locked -- -D warnings
+      - uses: jdx/mr-boxington-action@v1.7.3
+        with:
+          version: 1.30.0
+          toolchain: ${{ matrix.rust }}
+          # Warm later runs of the same PR; forks still never save.
+          save-on-pull-request: true
+      - run: mbx "+$TOOLCHAIN" test --workspace --all-features --locked
+      - run: mbx "+$TOOLCHAIN" clippy --workspace --all-targets --all-features --locked -- -D warnings
 
   docs-and-package:
     name: Documentation and packages

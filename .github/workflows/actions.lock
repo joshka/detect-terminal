@@ -5,6 +5,7 @@ version: 'v0.0.3'
 workflows:
     '.github/workflows/ci.yml':
         - 'actions/checkout@v6.1.0'
+        - 'jdx/mr-boxington-action@v1.7.3'
         - 'taiki-e/install-action@v2.90.5'
     '.github/workflows/release-plz.yml':
         - 'actions/checkout@v6.1.0'
@@ -20,6 +21,11 @@ dependencies:
         commit: 'sha1-b874e25ea559687bec77e281e9b271aa1367b624'
         owner_id: 110581826
         repo_id: 321270638
+    'jdx/mr-boxington-action@v1.7.3':
+        ref: 'v1.7.3'
+        commit: 'sha1-88acf2bb50552c7c508cbac13e5f8c576b95b1de'
+        owner_id: 216188
+        repo_id: 1345301886
     'release-plz/action@v0.5.139':
         ref: 'v0.5.139'
         commit: 'sha1-b8d6b54b02889ff2ae2bb82e8b57c3a8fc1683a5'
