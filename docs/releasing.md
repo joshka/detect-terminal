@@ -33,6 +33,7 @@ just check
 just msrv
 just ci-check
 just zizmor
+just lock-check
 just deny
 just package
 cargo publish --workspace --dry-run --locked

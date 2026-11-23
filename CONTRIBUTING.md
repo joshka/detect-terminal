@@ -25,7 +25,8 @@ For dependency policy and workflow security checks, also install:
 
 ```sh
 cargo install cargo-deny --version 0.20.2 --locked
-cargo install zizmor --version 1.26.1 --locked
+cargo install zizmor --version 1.32.0 --locked
+gh extension install github/gh-actions-lock --pin v0.5.1
 ```
 
 The versioned utility installs match CI. `actionlint` is needed for workflow syntax checks. Update
@@ -77,6 +78,10 @@ Run `just zizmor` for workflow and Dependabot security checks and `just ci-check
 syntax. CI runs zizmor with its pedantic rules and a read-only GitHub token for online audits. Local
 runs can use `GH_TOKEN` for the same online coverage; offline-only checks do not establish that
 coverage.
+
+Actions are locked in `.github/workflows/actions.lock`. See
+[GitHub Actions maintenance](docs/github-actions.md) before adding or updating an action, and run
+`just lock-check` to verify the lockfile.
 
 Keep fixes and maintenance in reviewable changes. Describe the problem and resulting behavior with
 an imperative summary. Include validation and limitations when requesting review. The project is

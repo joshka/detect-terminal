@@ -37,6 +37,9 @@ point. Record a rule's reason, not the conversation that introduced it.
 - Run `just check` for formatting, workspace tests, strict Clippy, and public/private Rustdoc.
 - Run `cargo check -p detect-terminal` after a structural refactor to keep changes buildable.
 - Use the focused recipes in `just --list` while iterating; run release gates as documented.
+- GitHub Actions are locked in `.github/workflows/actions.lock`. After changing a remote `uses:`,
+  run `gh actions-lock` and commit both files. Never edit or delete the lockfile by hand. See
+  [GitHub Actions maintenance](docs/github-actions.md).
 - Keep warnings actionable and fix their causes. Do not add broad lint suppressions.
 - Use small, coherent changes with imperative summaries; preserve unrelated local work.
 - Keep behavior changes, structural refactors, and dependency maintenance independently reviewable
