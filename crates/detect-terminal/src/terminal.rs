@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
+use crate::color::ColorInfo;
 use crate::multiplexer::MultiplexerInfo;
 
 /// A terminal application or emulation family inferred from available hints.
@@ -197,11 +198,12 @@ pub struct Identifier {
     pub value: String,
 }
 
-/// Evidence for the selected terminal kind, separate from multiplexer metadata.
+/// Evidence for a terminal kind or inferred color support, separate from multiplexer metadata.
 ///
-/// Found in [`TerminalInfo::detected_via`]. Environment sources name a key; its matched value is in
-/// [`TerminalInfo::identifiers`]. Command sources name a successful probe; its output is in
-/// [`TerminalInfo::command_probes`]. The display form prefixes these with `env:` or `command:`.
+/// Found in [`TerminalInfo::detected_via`] and [`ColorInfo::inferred_via`]. Environment sources
+/// name a key; a value matched for identity is in [`TerminalInfo::identifiers`]. Command sources
+/// name a successful probe; its output is in [`TerminalInfo::command_probes`]. The display form
+/// prefixes these with `env:` or `command:`.
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DetectionSource {
@@ -248,7 +250,7 @@ pub struct CommandProbe {
     pub error: Option<String>,
 }
 
-/// Terminal identity, multiplexer metadata, and the evidence used to select them.
+/// Terminal identity, multiplexer metadata, inferred color support, and their evidence.
 ///
 /// Obtain this result with [`detect`](crate::detect()),
 /// [`detect_from_env`](crate::detect_from_env),
@@ -262,9 +264,9 @@ pub struct CommandProbe {
 /// application, and version metadata may be absent even for a known kind.
 ///
 /// For unexpected or unknown results, inspect [`detected_via`](Self::detected_via) and
-/// [`identifiers`](Self::identifiers). The raw `term_program`, `term_program_version`, and `term`
-/// fields preserve the input hints even when they do not identify the selected kind. `raw_name`
-/// is a convenience fallback label, not the detected application's name.
+/// [`identifiers`](Self::identifiers). The raw `term_program`, `term_program_version`, `term`,
+/// and `colorterm` fields preserve the input hints even when they do not affect the result.
+/// `raw_name` is a convenience fallback label, not the detected application's name.
 ///
 /// [`raw_env_subset`](Self::raw_env_subset) contains consulted variables when capture is enabled;
 /// [`command_probes`](Self::command_probes) contains attempted commands when probing is enabled.
@@ -311,6 +313,9 @@ pub struct TerminalInfo {
     /// Raw `TERM` describing the emulation environment.
     pub term: Option<String>,
 
+    /// Raw `COLORTERM`, including unrecognized or empty values. It can be inherited.
+    pub colorterm: Option<String>,
+
     /// Raw `TERM_PROGRAM` if present, otherwise `TERM`.
     ///
     /// This convenience label can name something different from the selected kind.
@@ -318,6 +323,9 @@ pub struct TerminalInfo {
 
     /// One selected multiplexer, independently of the terminal match.
     pub multiplexer: Option<MultiplexerInfo>,
+
+    /// Color support inferred from the hints, with evidence separate from terminal identity.
+    pub color: ColorInfo,
 
     /// Evidence for the terminal match, empty when the kind is unknown.
     pub detected_via: Vec<DetectionSource>,
@@ -344,8 +352,10 @@ impl TerminalInfo {
             term_program: None,
             term_program_version: None,
             term: None,
+            colorterm: None,
             raw_name: None,
             multiplexer: None,
+            color: ColorInfo::unknown(),
             detected_via: Vec::new(),
             identifiers: Vec::new(),
             raw_env_subset: BTreeMap::new(),

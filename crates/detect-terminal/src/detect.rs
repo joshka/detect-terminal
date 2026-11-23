@@ -1,5 +1,6 @@
 //! Detection orchestration. See [Detection logic](crate#detection-logic) for precedence.
 
+use crate::color::infer_color;
 use crate::command::{CommandRunner, DefaultCommandRunner, probe_multiplexer};
 use crate::env::{EnvView, env_map_from_os};
 use crate::{
@@ -79,6 +80,7 @@ fn detect_with_runner(
     info.term_program = env.get("TERM_PROGRAM");
     info.term_program_version = env.get("TERM_PROGRAM_VERSION");
     info.term = env.get("TERM");
+    info.colorterm = env.get("COLORTERM");
     info.raw_name = info.term_program.clone().or_else(|| info.term.clone());
 
     info.multiplexer = detect_multiplexer(&mut env);
@@ -88,6 +90,7 @@ fn detect_with_runner(
         probe_multiplexer(mux, runner, &mut info.command_probes);
     }
     detect_terminal(&mut env, &mut info);
+    info.color = infer_color(&info);
     info.raw_env_subset = env.into_used();
     info
 }

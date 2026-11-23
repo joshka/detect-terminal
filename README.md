@@ -5,8 +5,9 @@ keeps application names (`TERM_PROGRAM`) separate from emulation names (`TERM`) 
 result was chosen. The library has no runtime dependencies.
 
 Detection is a best effort: inherited variables can be stale, and generic `TERM` values identify an
-emulation family rather than the actual application. It does not query escape sequences or measure
-terminal capabilities.
+emulation family rather than the actual application. Color support is also inferred from these hints
+and kept separate from identity; `Unknown` leaves the default to the application. The library does
+not query escape sequences, measure capabilities, or apply output policy such as `NO_COLOR`.
 
 ## Requirements
 

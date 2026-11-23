@@ -3,8 +3,9 @@
 ## Purpose and Scope
 
 `detect-terminal` identifies terminal applications and multiplexers from environment hints, with
-optional command probes. The library owns detection behavior; the CLI presents its result. Keep
-application identity, emulation hints, and capability claims distinct.
+optional command probes, and infers color support from the same hints. The library owns detection
+behavior; the CLI presents its result. Keep application identity, emulation hints, and capability
+claims distinct.
 
 ## Guidance to Load
 
@@ -23,6 +24,7 @@ point. Record a rule's reason, not the conversation that introduced it.
 
 - `crates/detect-terminal/src/lib.rs`: public exports and detection narrative.
 - `detect.rs`: precedence and orchestration, plus deterministic detection tests.
+- `color.rs`: color support inference and its tests.
 - `env.rs`: environment snapshots and diagnostic capture.
 - `command.rs`: optional execution, probe diagnostics, and version parsing.
 - `terminal.rs`, `multiplexer.rs`, `options.rs`: public result types and options.
