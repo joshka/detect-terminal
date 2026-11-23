@@ -24,6 +24,37 @@ const TMUX_FIRST_IDENTIFIED: (u32, u32) = (3, 2);
 /// unsupported, so each application should choose its own default. The enum is non-exhaustive.
 ///
 /// User preferences such as `NO_COLOR` and whether output is a TTY do not affect this value.
+///
+/// # Exact and minimum checks
+///
+/// Use a `supports_*` method to decide whether a color encoding can be used. Each is true for its
+/// level and every higher one. Use an `is_*` method only to ask which variant was inferred, as each
+/// matches exactly one.
+///
+/// | Method                  | `Unknown` | `Ansi16` | `Ansi256` | `TrueColor` |
+/// | ----------------------- | --------- | -------- | --------- | ----------- |
+/// | `is_unknown()`          | true      | false    | false     | false       |
+/// | `is_ansi16()`           | false     | true     | false     | false       |
+/// | `is_ansi256()`          | false     | false    | true      | false       |
+/// | `is_true_color()`       | false     | false    | false     | true        |
+/// | `supports_ansi16()`     | false     | true     | true      | true        |
+/// | `supports_ansi256()`    | false     | false    | true      | true        |
+/// | `supports_true_color()` | false     | false    | false     | true        |
+///
+/// For `Unknown`, false from a `supports_*` method means that support was not inferred, not that it
+/// is absent. Check [`is_unknown`](Self::is_unknown) first to apply a different default.
+///
+/// ```
+/// use detect_terminal::ColorSupport;
+///
+/// // A truecolor terminal can use the 256-color palette, but that is not its inferred variant.
+/// assert!(ColorSupport::TrueColor.supports_ansi256());
+/// assert!(!ColorSupport::TrueColor.is_ansi256());
+///
+/// // Nothing is inferred for an unknown terminal.
+/// assert!(!ColorSupport::Unknown.supports_ansi16());
+/// assert!(ColorSupport::Unknown.is_unknown());
+/// ```
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ColorSupport {
@@ -35,6 +66,67 @@ pub enum ColorSupport {
     Ansi256,
     /// 24-bit RGB colors are accepted, though tmux can convert them for its outer terminal.
     TrueColor,
+}
+
+impl ColorSupport {
+    /// Returns whether there is not enough evidence to infer color support.
+    ///
+    /// This does not mean that color is unsupported.
+    #[must_use]
+    pub const fn is_unknown(self) -> bool {
+        matches!(self, Self::Unknown)
+    }
+
+    /// Returns whether the inferred support is exactly the 16 ANSI colors.
+    ///
+    /// False for variants with more colors; use [`supports_ansi16`](Self::supports_ansi16) to
+    /// include them. No current detection rule selects [`Ansi16`](Self::Ansi16).
+    #[must_use]
+    pub const fn is_ansi16(self) -> bool {
+        matches!(self, Self::Ansi16)
+    }
+
+    /// Returns whether the inferred support is exactly the 256-color palette.
+    ///
+    /// False for [`TrueColor`](Self::TrueColor); use [`supports_ansi256`](Self::supports_ansi256)
+    /// to include it.
+    #[must_use]
+    pub const fn is_ansi256(self) -> bool {
+        matches!(self, Self::Ansi256)
+    }
+
+    /// Returns whether 24-bit RGB colors are inferred to be accepted.
+    ///
+    /// False for [`Unknown`](Self::Unknown), where the terminal might still accept RGB.
+    #[must_use]
+    pub const fn is_true_color(self) -> bool {
+        matches!(self, Self::TrueColor)
+    }
+
+    /// Returns whether at least the 16 ANSI colors are inferred to be supported.
+    ///
+    /// False for [`Unknown`](Self::Unknown), where the terminal might still support them.
+    #[must_use]
+    pub const fn supports_ansi16(self) -> bool {
+        matches!(self, Self::Ansi16 | Self::Ansi256 | Self::TrueColor)
+    }
+
+    /// Returns whether at least the 256-color palette is inferred to be supported.
+    ///
+    /// False for [`Unknown`](Self::Unknown), where the terminal might still support it.
+    #[must_use]
+    pub const fn supports_ansi256(self) -> bool {
+        matches!(self, Self::Ansi256 | Self::TrueColor)
+    }
+
+    /// Returns whether 24-bit RGB colors are inferred to be accepted.
+    ///
+    /// Currently equivalent to [`is_true_color`](Self::is_true_color), as no variant has more
+    /// colors. False for [`Unknown`](Self::Unknown), where the terminal might still accept RGB.
+    #[must_use]
+    pub const fn supports_true_color(self) -> bool {
+        matches!(self, Self::TrueColor)
+    }
 }
 
 impl fmt::Display for ColorSupport {
@@ -202,6 +294,35 @@ mod tests {
             .map(|(key, value)| ((*key).into(), (*value).into()))
             .collect();
         detect_from_env(&env).color
+    }
+
+    #[rstest]
+    #[case::unknown(ColorSupport::Unknown, [true, false, false, false])]
+    #[case::ansi16(ColorSupport::Ansi16, [false, true, false, false])]
+    #[case::ansi256(ColorSupport::Ansi256, [false, false, true, false])]
+    #[case::true_color(ColorSupport::TrueColor, [false, false, false, true])]
+    fn predicates_match_one_variant(#[case] support: ColorSupport, #[case] expected: [bool; 4]) {
+        let actual = [
+            support.is_unknown(),
+            support.is_ansi16(),
+            support.is_ansi256(),
+            support.is_true_color(),
+        ];
+        assert_eq!(actual, expected);
+    }
+
+    #[rstest]
+    #[case::unknown(ColorSupport::Unknown, [false, false, false])]
+    #[case::ansi16(ColorSupport::Ansi16, [true, false, false])]
+    #[case::ansi256(ColorSupport::Ansi256, [true, true, false])]
+    #[case::true_color(ColorSupport::TrueColor, [true, true, true])]
+    fn supports_includes_higher_levels(#[case] support: ColorSupport, #[case] expected: [bool; 3]) {
+        let actual = [
+            support.supports_ansi16(),
+            support.supports_ansi256(),
+            support.supports_true_color(),
+        ];
+        assert_eq!(actual, expected);
     }
 
     #[rstest]
