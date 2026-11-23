@@ -81,10 +81,11 @@ impl fmt::Display for MultiplexerKind {
 pub struct MultiplexerInfo {
     /// Multiplexer type detected from environment markers.
     pub kind: MultiplexerKind,
-    /// Version extracted from optional command probes.
+    /// Version from the environment or optional command probes.
     ///
-    /// This uses `tmux -V`, `screen --version`, or `zellij --version` when
-    /// command probing is enabled.
+    /// For tmux, `TERM_PROGRAM_VERSION` is used when `TERM_PROGRAM=tmux`. Otherwise `tmux -V`,
+    /// `screen --version`, or `zellij --version` supplies it when command probing is enabled. A
+    /// probe never replaces a version from the environment.
     pub version: Option<String>,
     /// The tmux client's terminal name, usually a terminfo name such as `xterm-256color`.
     ///

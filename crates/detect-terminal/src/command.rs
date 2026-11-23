@@ -74,8 +74,11 @@ pub(crate) fn probe_multiplexer(
             args: &["--version"],
         },
     };
-    mux.version =
+    // `tmux -V` describes the installed client, so it only fills in for the running server's
+    // version.
+    let probed =
         run_command(runner, probes, &spec).and_then(|output| parse_version(mux.kind, &output));
+    mux.version = mux.version.take().or(probed);
     if mux.kind == MultiplexerKind::Tmux {
         let term = CommandSpec {
             program: "tmux",

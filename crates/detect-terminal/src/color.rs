@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use crate::{DetectionSource, TerminalInfo, TerminalKind};
+use crate::{DetectionSource, MultiplexerKind, TerminalInfo, TerminalKind};
 
 /// First Apple Terminal build reported to render RGB sequences, from macOS 26.0 (Tahoe).
 ///
@@ -12,6 +12,11 @@ const APPLE_FIRST_TRUECOLOR_BUILD: u32 = 464;
 
 /// First iTerm2 major version with 24-bit color.
 const ITERM2_FIRST_TRUECOLOR_MAJOR: u32 = 3;
+
+/// First tmux release that identifies itself and its version to panes.
+///
+/// Earlier releases can also accept RGB, but their environment does not establish the version.
+const TMUX_FIRST_IDENTIFIED: (u32, u32) = (3, 2);
 
 /// Color encodings a terminal is inferred to support, not a measured capability.
 ///
@@ -28,7 +33,7 @@ pub enum ColorSupport {
     Ansi16,
     /// The 256-color indexed palette, without reliable RGB support.
     Ansi256,
-    /// 24-bit RGB colors.
+    /// 24-bit RGB colors are accepted, though tmux can convert them for its outer terminal.
     TrueColor,
 }
 
@@ -91,6 +96,10 @@ impl ColorInfo {
 
 /// Infer color support after terminal identity and raw hints have been assigned.
 pub(crate) fn infer_color(info: &TerminalInfo) -> ColorInfo {
+    if tmux_accepts_truecolor(info) {
+        let keys = ["TMUX", "TERM_PROGRAM", "TERM_PROGRAM_VERSION"];
+        return ColorInfo::from_env(ColorSupport::TrueColor, &keys);
+    }
     if hints_may_describe_another_terminal(info) {
         return ColorInfo::unknown();
     }
@@ -133,6 +142,34 @@ pub(crate) fn infer_color(info: &TerminalInfo) -> ColorInfo {
         return ColorInfo::from_env(ColorSupport::TrueColor, &["TERM"]);
     }
     ColorInfo::unknown()
+}
+
+/// Whether the detected tmux supplied the program hints and is known to accept RGB.
+///
+/// A terminal launched from a tmux pane can inherit `TMUX`, but replaces `TERM_PROGRAM` if it sets
+/// one. Requiring tmux's own value also ties the version to tmux.
+fn tmux_accepts_truecolor(info: &TerminalInfo) -> bool {
+    let Some(mux) = &info.multiplexer else {
+        return false;
+    };
+    // A version known only from a probe may belong to a tmux that does not own this environment.
+    let version_is_from_env = info.term_program.as_deref() == Some("tmux")
+        && info
+            .term_program_version
+            .as_deref()
+            .is_some_and(|version| !version.is_empty());
+    let version = mux.version.as_deref().and_then(tmux_version);
+    mux.kind == MultiplexerKind::Tmux
+        && version_is_from_env
+        && info.term.as_deref() != Some("dumb")
+        && version.is_some_and(|version| version >= TMUX_FIRST_IDENTIFIED)
+}
+
+/// Parse a tmux release such as `3.6a`; development versions such as `next-3.7` are not releases.
+fn tmux_version(version: &str) -> Option<(u32, u32)> {
+    let (major, minor) = version.split_once('.')?;
+    let minor = minor.trim_end_matches(|c: char| c.is_ascii_lowercase());
+    Some((major.parse().ok()?, minor.parse().ok()?))
 }
 
 /// Multiplexers, their emulation families, and `TERM=dumb` sessions can inherit outer hints.
@@ -247,6 +284,35 @@ mod tests {
         ];
         pairs.push((key, value));
         assert_eq!(color(&pairs), ColorInfo::unknown());
+    }
+
+    #[rstest]
+    #[case("3.1c", None, ColorSupport::Unknown)]
+    #[case("3.2", None, ColorSupport::TrueColor)]
+    #[case("3.5a", None, ColorSupport::TrueColor)]
+    #[case("3.6a", Some("screen-256color"), ColorSupport::TrueColor)]
+    #[case("3.10", Some("tmux-256color"), ColorSupport::TrueColor)]
+    #[case("4.0", None, ColorSupport::TrueColor)]
+    #[case("3.8", Some("dumb"), ColorSupport::Unknown)]
+    #[case("next-3.7", None, ColorSupport::Unknown)]
+    #[case("", None, ColorSupport::Unknown)]
+    fn tmux_support_depends_on_its_version(
+        #[case] version: &str,
+        #[case] term: Option<&str>,
+        #[case] support: ColorSupport,
+    ) {
+        let mut pairs = vec![
+            ("TMUX", "session"),
+            ("TERM_PROGRAM", "tmux"),
+            ("TERM_PROGRAM_VERSION", version),
+            ("COLORTERM", "truecolor"),
+        ];
+        pairs.extend(term.map(|value| ("TERM", value)));
+        let keys: &[&str] = match support {
+            ColorSupport::TrueColor => &["TMUX", "TERM_PROGRAM", "TERM_PROGRAM_VERSION"],
+            _ => &[],
+        };
+        assert_eq!(color(&pairs), ColorInfo::from_env(support, keys));
     }
 
     #[rstest]

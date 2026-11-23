@@ -105,13 +105,22 @@ fn detect_multiplexer(env: &mut EnvView<'_>) -> Option<crate::MultiplexerInfo> {
         if env.get(key).is_some_and(|value| !value.is_empty()) {
             return Some(crate::MultiplexerInfo {
                 kind,
-                version: None,
+                version: multiplexer_version(env, kind),
                 client_term: None,
                 client_type: None,
             });
         }
     }
     None
+}
+
+/// Read the version tmux exports, rejecting one that belongs to another program.
+fn multiplexer_version(env: &mut EnvView<'_>, kind: MultiplexerKind) -> Option<String> {
+    if kind != MultiplexerKind::Tmux || env.get("TERM_PROGRAM")? != "tmux" {
+        return None;
+    }
+    env.get("TERM_PROGRAM_VERSION")
+        .filter(|version| !version.is_empty())
 }
 
 /// Assign a single terminal match, preferring program identity over emulation hints.
@@ -246,6 +255,7 @@ mod tests {
     use rstest::rstest;
 
     use super::*;
+    use crate::ColorSupport;
     use crate::command::{CommandOutput, CommandSpec, parse_version};
 
     /// Build snapshots without changing the process environment.
@@ -433,6 +443,24 @@ mod tests {
             info.detected_via,
             vec![DetectionSource::EnvVar("TERM_PROGRAM".into())]
         );
+    }
+
+    #[rstest]
+    #[case("TMUX", Some("tmux"), "3.6a", Some("3.6a"))]
+    #[case("TMUX", Some("tmux"), "", None)]
+    #[case("TMUX", Some("ghostty"), "1.2.3", None)]
+    #[case("TMUX", None, "3.6a", None)]
+    #[case("ZELLIJ", Some("tmux"), "3.6a", None)]
+    fn tmux_version_requires_its_own_program_marker(
+        #[case] marker: &str,
+        #[case] program: Option<&str>,
+        #[case] version: &str,
+        #[case] expected: Option<&str>,
+    ) {
+        let mut pairs = vec![(marker, "session"), ("TERM_PROGRAM_VERSION", version)];
+        pairs.extend(program.map(|program| ("TERM_PROGRAM", program)));
+        let info = detect_from_env(&env(&pairs));
+        assert_eq!(info.multiplexer.unwrap().version.as_deref(), expected);
     }
 
     #[rstest]
@@ -701,6 +729,48 @@ mod tests {
         assert_eq!(info.multiplexer.unwrap().version, None);
         assert_eq!(info.command_probes[0].status, status);
         assert_eq!(info.command_probes[0].stderr, "error");
+    }
+
+    #[rstest]
+    #[case::probe_failed("tmux", "3.6a", None, Some("3.6a"), ColorSupport::TrueColor)]
+    #[case::env_wins("tmux", "3.1c", Some("tmux 3.8"), Some("3.1c"), ColorSupport::Unknown)]
+    #[case::gap("tmux", "", Some("tmux 3.8"), Some("3.8"), ColorSupport::Unknown)]
+    #[case::inherited(
+        "Apple_Terminal",
+        "455.1",
+        Some("tmux 3.8"),
+        Some("3.8"),
+        ColorSupport::Unknown
+    )]
+    fn tmux_probe_fills_version_without_color_evidence(
+        #[case] program: &str,
+        #[case] program_version: &str,
+        #[case] banner: Option<&str>,
+        #[case] version: Option<&str>,
+        #[case] support: ColorSupport,
+    ) {
+        let options = DetectOptions {
+            allow_commands: true,
+            ..DetectOptions::default()
+        };
+        let mut runner = Runner::default();
+        if let Some(banner) = banner {
+            let output = CommandOutput {
+                stdout: banner.into(),
+                stderr: String::new(),
+                status: Some(0),
+            };
+            runner.outputs.insert("tmux -V".into(), output);
+        }
+        let snapshot = env(&[
+            ("TMUX", "session"),
+            ("TERM_PROGRAM", program),
+            ("TERM_PROGRAM_VERSION", program_version),
+        ]);
+        let info = detect_with_runner(&snapshot, options, &runner);
+        assert_eq!(info.multiplexer.unwrap().version.as_deref(), version);
+        assert_eq!(info.color.support, support);
+        assert_eq!(info.command_probes.len(), 3);
     }
 
     #[test]
