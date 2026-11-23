@@ -8,3 +8,7 @@ tables = false
 [table-format]
 enabled = true
 style = "aligned"
+
+[per-file-ignores]
+# release-plz writes commit summaries and links as single lines.
+"CHANGELOG.md" = ["MD013"]
