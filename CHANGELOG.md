@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## [0.1.3](https://github.com/joshka/detect-terminal/compare/v0.1.2...v0.1.3) - 2026-11-23
+
+### Other
+
+- Detect tmux version and truecolor support from the environment ([#6](https://github.com/joshka/detect-terminal/pull/6))
+- Infer terminal color support ([#5](https://github.com/joshka/detect-terminal/pull/5))
+
 ## [0.1.2](https://github.com/joshka/detect-terminal/compare/v0.1.1...v0.1.2) - 2026-09-27
 
 ### Fixed
